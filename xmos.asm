@@ -449,10 +449,10 @@ GUARD &C000
     STA extended_input_code + &0F \ Patch workspace high byte into handler
     STX extended_input_code + &25 \ Patch ROM slot number into handler
     STA &AB                     \ Set up workspace pointer high
-    STA &020D                   \ Set OSHWM high byte
+    STA os_himem_hi                   \ Set OSHWM high byte
     LDA #&00
     STA &AA                     \ Workspace pointer low = 0
-    STA &020C                   \ OSHWM low byte = 0
+    STA os_himem_lo                   \ OSHWM low byte = 0
     JSR alias_init                   \ Initialise alias system
     LDA keyon_active
     BEQ reset_skip_keyon
@@ -542,7 +542,7 @@ GUARD &C000
 .xi_read_loop
     JSR osrdch
     STA xi_char
-    LDA &026A
+    LDA os_escape_flag
     BPL xi_dispatch
     LDA xi_char
     JSR oswrch
@@ -1695,7 +1695,7 @@ GUARD &C000
     LDX #&00
 .keyon_copy_handler
     LDA key_remap_handler,X
-    STA &d100,X
+    STA keyon_handler_dest,X
     INX
     BNE keyon_copy_handler
     LDA #&00
@@ -1725,9 +1725,9 @@ GUARD &C000
     LDA #&00
     STA keyon_active
     LDA saved_keyv_lo           \ Restore original KEYV
-    STA &020A
+    STA keyv_lo
     LDA saved_keyv_hi
-    STA &020B
+    STA keyv_hi
 .keyoff_print_msg
     STROUT msg_keys_off
     JMP keyon_rts
@@ -1762,9 +1762,9 @@ GUARD &C000
     LDA #&04
     BNE keyname_search
 .keyname_from_table
-    LDX &023c
+    LDX os_key_trans
     STX &a8
-    LDX &023d
+    LDX os_key_trans_hi
     STX &a9
     TAY
     LDA (&a8),Y
@@ -2356,7 +2356,7 @@ GUARD &C000
     EQUS &63, "Can't open alias file", 0
 .cmd_aliclr
     LDA #&ff
-    STA &b165
+    STA alias_clear_flag
     RTS
 .cmd_store
     EQUB &AD, &F4, &00  \ LDA 0x00f4
@@ -2371,7 +2371,7 @@ GUARD &C000
     LDA &8200,X
     STA store_buf_2,X
     LDA &8300,X
-    STA &a955,X
+    STA alias_exec_buf,X
     INX
     BNE store_copy_rom
     EQUB &AD, &F4, &00  \ LDA 0x00f4
@@ -2486,8 +2486,8 @@ GUARD &C000
     STA crtc_data
     LDX #&27
 .mem_copy_header
-    LDA &9c7e,X
-    STA &7c00,X
+    LDA mem_header,X
+    STA mode7_screen,X
     DEX
     BPL mem_copy_header
     LDA os_wrch_dest
@@ -2541,12 +2541,12 @@ GUARD &C000
     TXA
     LDX #&04
 .mem_check_key
-    CMP &9c6f,X
+    CMP mem_key_codes,X
     BEQ mem_dispatch
     DEX
     BPL mem_check_key
     PHA
-    LDA &7c27
+    LDA mode7_screen + &27
     CMP #&48
     BEQ mem_handle_hex
     PLA
@@ -2572,9 +2572,9 @@ GUARD &C000
     TXA
     ASL A
     TAX
-    LDA &9c74,X
+    LDA mem_routine_table,X
     STA cmd_dispatch_addr + 1
-    LDA &9c75,X
+    LDA mem_routine_table + 1,X
     STA cmd_dispatch_addr + 2
     JSR cmd_dispatch
     JMP mem_adjust_ptr
@@ -2675,9 +2675,9 @@ GUARD &C000
     STA &A9
     RTS
 .mem_toggle_mode
-    LDA &7C27
+    LDA mode7_screen + &27
     EOR #&09
-    STA &7C27
+    STA mode7_screen + &27
     RTS
 .dis_setup
     LDA #&16
@@ -2747,7 +2747,7 @@ GUARD &C000
     LDY #&00
     TYA
 .dis_bracket_loop
-    STA &7de6,Y
+    STA mode7_screen + &1E6,Y
     INY
     INY
     INY
@@ -2758,14 +2758,14 @@ GUARD &C000
     ADC mem_column
     TAY
     LDA #&5d
-    STA &7de6,Y
+    STA mode7_screen + &1E6,Y
     LDA #&5b
-    STA &7de9,Y
+    STA mode7_screen + &1E9,Y
     RTS
 .dis_temp
     EQUB &00  \ &9649: .
 .dis_print_hex_byte
-    STA &965e
+    STA dis_print_lo_nibble + 1
     LSR A
     LSR A
     LSR A
@@ -2788,7 +2788,7 @@ GUARD &C000
 .dis_hex_byte_rts
     RTS
 .dis_print_hex_word
-    STA &967d
+    STA dis_hex_word_lda + 1
     LSR A
     LSR A
     LSR A
@@ -2796,6 +2796,7 @@ GUARD &C000
     TAX
     LDA hex_digits,X
     JSR oswrch
+.dis_hex_word_lda
     LDA #&62
     AND #&0f
     TAX
@@ -2896,9 +2897,9 @@ GUARD &C000
     PHA
     ASL A
     TAX
-    LDA &96d5,X
+    LDA dis_addr_mode_ptrs,X
     STA &ac
-    LDA &96d6,X
+    LDA dis_addr_mode_ptrs + 1,X
     STA &ad
     LDY #&ff
 .dis_format_loop
@@ -2922,11 +2923,11 @@ GUARD &C000
 .dis_print_addr
     LDA #&86
     JSR oswrch
-    LDA &0318
+    LDA os_vdu_x
     CMP #&16
     BNE dis_print_addr
     PLX
-    LDA &96f5,X
+    LDA dis_operand_sizes,X
     PHA
     TAX
     LDY #&00
@@ -2943,7 +2944,7 @@ GUARD &C000
 .dis_print_ascii
     LDA #&85
     JSR oswrch
-    LDA &0318
+    LDA os_vdu_x
     CMP #&21
     BNE dis_print_ascii
     PLX
@@ -3080,7 +3081,7 @@ GUARD &C000
 .bau_get_length
     LDY #&04
     LDA (&a8),Y
-    STA &0900
+    STA os_rs423_buf
     DEY
     CMP #&2e
     BNE bau_skip_token
@@ -3492,10 +3493,10 @@ GUARD &C000
 .lvar_start
     LDX #&00
 .lvar_var_loop
-    LDA &0480,X
+    LDA os_fkey_buf,X
     STA &a8
     INX
-    LDA &0480,X
+    LDA os_fkey_buf,X
     DEX
     STA &a9
     CMP #&00
@@ -3548,8 +3549,10 @@ GUARD &C000
     EQUB &03
 .mem_column
     EQUB &02                   \ MEM column counter (0-7)
+.mem_key_codes
     EQUB &88, &89, &8A, &8B   \ Key codes: left, right, down, up
     EQUB &09                   \ TAB key
+.mem_routine_table
     EQUW mem_cursor_up                 \ Address of cursor-up routine
     EQUW mem_cursor_down                 \ Address of cursor-down routine
     EQUW mem_page_down                 \ Address of page-down routine
@@ -3744,7 +3747,7 @@ GUARD &C000
     LDY #&00
 .xi_supp_save_loop
     LDA (&a8),Y
-    STA &aa55,Y
+    STA alias_buffer,Y
     INY
     CPY xi_cursor_pos
     BNE xi_supp_save_loop
