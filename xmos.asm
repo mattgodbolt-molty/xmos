@@ -438,46 +438,57 @@ GUARD &C000
 \ ============================================================================
 \ Post-reset handler (service call &27)
 \ ============================================================================
+\ ============================================================================
+\ Post-reset handler (service call &27) — restore XMOS state after BREAK
+\ ============================================================================
 .handle_reset
     PHA
     PHX
     PHY
-    LDA &0df0,X
-    STA &84e0
-    STX &84f6
-    STA &ab
-    STA &020d
+    LDA rom_workspace_table,X   \ Get our ROM's workspace page
+    STA extended_input_code + &0F \ Patch workspace high byte into handler
+    STX extended_input_code + &25 \ Patch ROM slot number into handler
+    STA &AB                     \ Set up workspace pointer high
+    STA &020D                   \ Set OSHWM high byte
     LDA #&00
-    STA &aa
-    STA &020c
-    JSR L9379
+    STA &AA                     \ Workspace pointer low = 0
+    STA &020C                   \ OSHWM low byte = 0
+    JSR L9379                   \ Initialise alias system
     LDA keyon_active
-    BEQ L84AC
+    BEQ reset_skip_keyon
     LDA #&00
     STA keyon_active
-    JSR L8C89
-.L84AC
+    JSR L8C89                   \ Re-enable KEYON if it was active
+.reset_skip_keyon
     LDA xon_flag
-    BEQ L84C1
-    LDA #&04
-    LDX #&01
+    BEQ reset_skip_xon
+    LDA #&04                   \ OSBYTE 4: cursor key status
+    LDX #&01                   \ Enable cursor editing
     LDY #&00
     JSR osbyte
-    LDA #&16
+    LDA #&16                   \ OSBYTE &16: reset function keys?
     LDX #&01
     JSR osbyte
-.L84C1
-    LDY #&00
-.L84C3
-    LDA &84d1,Y
-    STA (&aa),Y
+.reset_skip_xon
+{
+    LDY #&00                   \ Copy extended input handler code to workspace
+.copy_loop
+    LDA extended_input_code,Y
+    STA (&AA),Y
     INY
-    CPY #&d0
-    BNE L84C3
+    CPY #&D0                   \ Copy &D0 (208) bytes
+    BNE copy_loop
+}
     PLY
     PLX
     PLA
     RTS
+\ ============================================================================
+\ Extended input handler code — copied to workspace RAM on reset
+\ This block runs from the ROM's private workspace page, intercepting
+\ keyboard input to provide cursor editing, insert/delete, etc.
+\ ============================================================================
+.extended_input_code
     EQUB &08, &C9, &00, &F0, &04, &28, &4C, &39, &EF, &68, &86, &AE, &84, &AF, &A9, &DB  \ &84D1: .....(L9.h......
     EQUB &85, &AB, &A9, &E0, &85, &AA, &A0, &0F, &B1, &AE, &91, &AA, &88, &10, &F9, &A5  \ &84E1: ................
     EQUB &F4, &8D, &30, &02, &A9, &07, &8D, &30, &FE, &85, &F4, &20, &0C, &85, &08, &AD  \ &84F1: ..0....0... ....
