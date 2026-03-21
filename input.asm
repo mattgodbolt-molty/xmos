@@ -311,26 +311,27 @@
     JMP xi_read_loop
 }
 .xi_handle_cr
+{
     LDA xon_flag
-    BEQ xi_cr_check_mode
+    BEQ check_mode
     LDA #&04
     LDX #&01
     LDY #&00
     JSR osbyte
-.xi_cr_check_mode
+.check_mode
     LDA os_mode
     CMP #&0c
-    BNE xi_cr_normal
+    BNE normal
     LDA xi_cursor_pos
     CMP #&04
-    BNE xi_cr_normal
+    BNE normal
     LDY #&03
-.xi_cr_check_save
+.check_save
     LDA (&a8),Y
     CMP save_keyword,Y
-    BNE xi_cr_normal
+    BNE normal
     DEY
-    BPL xi_cr_check_save
+    BPL check_save
     JSR osnewl
     LDA os_mode
     PHA
@@ -342,18 +343,18 @@
     STA os_mode
     CLC
     RTS
-.xi_cr_normal
+.normal
     SEC
     LDA xi_cursor_pos
     SBC xi_line_len
-    BEQ xi_cr_finish
+    BEQ finish
     TAX
-.xi_cr_fwd_loop
+.fwd_loop
     LDA #&09
     JSR oswrch
     DEX
-    BNE xi_cr_fwd_loop
-.xi_cr_finish
+    BNE fwd_loop
+.finish
     JSR xi_support_entry
     LDY xi_cursor_pos
     LDA #&0d
@@ -362,6 +363,7 @@
     CLC
     LDX #&00
     RTS
+}
 .save_keyword
     EQUS "SAVE"
 .xi_cr_restore_keys
