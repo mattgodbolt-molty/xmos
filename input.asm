@@ -1,8 +1,7 @@
 \ input.asm — Extended input system: handle_reset, XON handler, keyboard intercept
 
 .handle_reset
-    PHA
-    PHX
+    PHA : PHX
     PHY
     LDA rom_workspace_table,X   \ Get our ROM's workspace page
     STA extended_input_code + &0F \ Patch workspace high byte into handler
@@ -38,8 +37,7 @@
     CPY #&D0                   \ Copy &D0 (208) bytes
     BNE copy_loop
 }
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 \ ============================================================================
@@ -280,8 +278,7 @@
     LDA (&a8),Y
     DEY
     STA (&a8),Y
-    INY
-    INY
+    INY : INY
     DEX
     BNE shift_loop
 .do_delete
@@ -559,8 +556,7 @@
     LDA (&a8),Y
     DEY
     STA (&a8),Y
-    INY
-    INY
+    INY : INY
     DEX
     BNE xi_tab_shift_loop
 .xi_tab_update_pos
@@ -761,8 +757,7 @@
 .xi_htab_kw_done
     JMP xi_htab_next_char
 .xi_htab_kw_advance
-    INY
-    INY
+    INY : INY
     TYA
     CLC
     ADC &00AE

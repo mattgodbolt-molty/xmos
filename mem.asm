@@ -291,8 +291,7 @@
     TYA
 .dis_bracket_loop
     STA mode7_screen + &1E6,Y
-    INY
-    INY
+    INY : INY
     INY
     CPY #&1b
     BNE dis_bracket_loop

@@ -246,8 +246,7 @@
     PHX
     PHY
     JSR print_decimal
-    PLY
-    PLX
+    PLY : PLX
 .bau_space_rts
     RTS
 .msg_now_splitting

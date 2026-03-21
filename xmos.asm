@@ -60,8 +60,7 @@ GUARD &C000
 \ *HELP handler (service call &09)
 \ ============================================================================
 .handle_help
-    PHA
-    PHX
+    PHA : PHX
     PHY
     LDX #&00
 {
@@ -75,8 +74,7 @@ GUARD &C000
     INX
     BNE print_loop
 .done
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 }
@@ -159,8 +157,7 @@ GUARD &C000
 }
     JSR osnewl
     INY                         \ Advance pointer past this entry
-    CLC
-    TYA
+    CLC : TYA
     ADC zp_ptr_lo
     STA zp_ptr_lo
     LDA zp_ptr_hi
@@ -168,8 +165,7 @@ GUARD &C000
     STA zp_ptr_hi
     JMP help_print_loop
 .help_done
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 \ Check if *HELP FEATURES
@@ -201,8 +197,7 @@ GUARD &C000
 .done
 }
     JSR osnewl
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 
@@ -232,8 +227,7 @@ GUARD &C000
     BNE skip_help
 }
     INY                         \ Advance pointer to next entry
-    CLC
-    TYA
+    CLC : TYA
     ADC zp_ptr_lo
     STA zp_ptr_lo
     LDA zp_ptr_hi
@@ -245,8 +239,7 @@ GUARD &C000
     BNE help_try_next_cmd
     LDA #&0F                   \ Print mode 0 (reset double height)
     JSR osasci
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 
@@ -279,8 +272,7 @@ GUARD &C000
     BNE pad_loop
 }
     INY                         \ Skip handler address (2 bytes)
-    INY
-    INY
+    INY : INY
 {
 .print_help_text                \ Print the help description
     LDA (&a8),Y
@@ -291,8 +283,7 @@ GUARD &C000
 .done
 }
     JSR osnewl
-    PLY
-    PLX
+    PLY : PLX
     PLA
     RTS
 
@@ -300,8 +291,7 @@ GUARD &C000
 \ * command handler (service call &04) — dispatch unrecognised commands
 \ ============================================================================
 .handle_command
-    PHA
-    PHX
+    PHA : PHX
     PHY
     LDA #LO(command_table)
     STA &a8
@@ -359,8 +349,7 @@ GUARD &C000
     LDA (&a8),Y                \ Load handler address high byte
     STA cmd_dispatch_addr + 2
     JSR cmd_dispatch
-    PLY
-    PLX
+    PLY : PLX
     PLA
     LDA #&00                   \ Claim the service call
     RTS

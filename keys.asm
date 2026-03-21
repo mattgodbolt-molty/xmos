@@ -313,16 +313,11 @@
 .keyname_scan_loop
     CMP (&a8),Y
     BEQ keyname_found
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
-    INY
+    INY : INY
+    INY : INY
+    INY : INY
+    INY : INY
+    INY : INY
     CPY #&96
     BCC keyname_scan_loop
     JMP oswrch
