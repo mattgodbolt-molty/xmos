@@ -493,7 +493,7 @@ GUARD &C000
     CMP #&00
     BEQ xi_entry
     PLP
-    JMP &EF39
+    JMP default_keyv
 .xi_entry
     PLA
     STX &00AE
@@ -509,13 +509,13 @@ GUARD &C000
     DEY
     BPL xi_save_regs_loop
     LDA &00F4
-    STA &0230
+    STA os_mode
     LDA #&07
     STA sheila_romsel
     STA &00F4
     JSR xi_check_xon
     PHP
-    LDA &0230
+    LDA os_mode
     STA sheila_romsel
     STA &00F4
     LDA #&00
@@ -526,7 +526,7 @@ GUARD &C000
     BNE xi_init_state
     LDX &00AE
     LDY &00AF
-    JMP &EF39
+    JMP default_keyv
 .xi_init_state
     LDA #&00
     STA xi_scroll_count
@@ -754,7 +754,7 @@ GUARD &C000
     LDY #&00
     JSR osbyte
 .xi_cr_check_mode
-    LDA &0230
+    LDA os_mode
     CMP #&0c
     BNE xi_cr_normal
     LDA xi_cursor_pos
@@ -768,14 +768,14 @@ GUARD &C000
     DEY
     BPL xi_cr_check_save
     JSR osnewl
-    LDA &0230
+    LDA os_mode
     PHA
     JSR cmd_s
     LDA #&0d
     EQUB &92, &A8  \ STA (&a8)
     LDY #&00
     PLA
-    STA &0230
+    STA os_mode
     CLC
     RTS
 .xi_cr_normal
@@ -1030,7 +1030,7 @@ GUARD &C000
 .xi_handle_htab
     LDA xi_cursor_pos
     BEQ xi_tab_finished
-    LDA &0230
+    LDA os_mode
     CMP #&0c
     BNE xi_tab_finished
     SEC
@@ -1942,7 +1942,7 @@ GUARD &C000
     PLX
     RTS
 .parse_cmdline
-    LDY &8a67
+    LDY compare_string_y
     DEY
 .parse_skip_spaces
     INY
@@ -1951,7 +1951,7 @@ GUARD &C000
     BEQ parse_skip_spaces
     CMP #&2e
     BEQ parse_skip_spaces
-    STY &8a67
+    STY compare_string_y
     RTS
 .alias_semicolon_flag
     EQUB &FF  \ &9032: .
@@ -1971,11 +1971,11 @@ GUARD &C000
     EQUB &B2, &A8  \ LDA (0xa8)
     CMP #&ff
     BEQ alias_exec_setup
-    LDY &8a67
+    LDY compare_string_y
     PHY
     JSR compare_string
     PLY
-    STY &8a67
+    STY compare_string_y
     BCC alias_find_end
     LDA #&ff
     STA alias_semicolon_flag
@@ -2027,9 +2027,9 @@ GUARD &C000
     STA &a9
     JMP alias_check_end
 .alias_exec_setup
-    LDA &8a67
+    LDA compare_string_y
     STA &70
-    LDY &8a67
+    LDY compare_string_y
     DEY
 .alias_exec_copy
     INY
@@ -2038,7 +2038,7 @@ GUARD &C000
     BNE alias_exec_copy
     TYA
     SEC
-    SBC &8a67
+    SBC compare_string_y
     CLC
     ADC &a8
     BCC alias_exec_run
@@ -2050,7 +2050,7 @@ GUARD &C000
 .alias_exec_run
     CLC
     LDA &f2
-    ADC &8a67
+    ADC compare_string_y
     STA &f2
     LDA &f3
     ADC #&00
@@ -2084,7 +2084,7 @@ GUARD &C000
     LDA &f3
     SBC #&00
     STA &f3
-    STY &8a67
+    STY compare_string_y
     INY
 .alias_parse_arg
     LDA (&f2),Y
@@ -2099,7 +2099,7 @@ GUARD &C000
     LDA #&ff
     STA (&a8),Y
     TYA
-    LDY &8a67
+    LDY compare_string_y
     STA (&a8),Y
     RTS
 .cmd_aliases
@@ -2195,13 +2195,13 @@ GUARD &C000
     BNE alias_exec_name
     INY
     INY
-    STY &93a7
+    STY alias_file_handle
     LDX #&00
 .alias_exec_expand
-    LDY &93a7
+    LDY alias_file_handle
     LDA (&a8),Y
     INY
-    STY &93a7
+    STY alias_file_handle
     STA &a55b,X
     INX
     CMP #&0d
@@ -2214,7 +2214,7 @@ GUARD &C000
 .alias_copy_literal
     LDA (&a8),Y
     INY
-    STY &93a7
+    STY alias_file_handle
     CMP #&25
     BEQ alias_exec_expand
     DEX
@@ -2226,7 +2226,7 @@ GUARD &C000
     SBC #&30
     PHX
     TAX
-    LDY &8a67
+    LDY compare_string_y
     CMP #&00
     BEQ alias_copy_param
     DEY
@@ -2290,13 +2290,13 @@ GUARD &C000
     JSR osfind
     CMP #&00
     BEQ alild_not_found
-    STA &93a7
+    STA alias_file_handle
     LDA #&65
     STA &a8
     LDA #&b1
     STA &a9
 .alild_read_loop
-    LDY &93a7
+    LDY alias_file_handle
     JSR osbget
     BCS alild_close
     EQUB &92, &A8  \ STA (0xa8)
@@ -2310,7 +2310,7 @@ GUARD &C000
     JMP alild_read_loop
 .alild_close
     LDA #&00
-    LDY &93a7
+    LDY alias_file_handle
     JMP osfind
 .alild_not_found
     JSR copy_inline_to_stack    \ BRK error: "Alias file not found"
@@ -2328,13 +2328,13 @@ GUARD &C000
     JSR osfind
     CMP #&00
     BEQ alild_cant_open
-    STA &93a7
+    STA alias_file_handle
     LDA #&65
     STA &a8
     LDA #&b1
     STA &a9
 .alild_check_end
-    LDY &93a7
+    LDY alias_file_handle
     EQUB &B2, &A8  \ LDA (0xa8)
     JSR osbput
     CMP #&ff
@@ -2349,7 +2349,7 @@ GUARD &C000
     JMP alild_check_end
 .alild_open_error
     LDA #&00
-    LDY &93a7
+    LDY alias_file_handle
     JMP osfind
 .alild_cant_open
     JSR copy_inline_to_stack    \ BRK error: "Can't open alias file"
@@ -2361,7 +2361,7 @@ GUARD &C000
 .cmd_store
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     ORA #&80
-    STA &fe30
+    STA sheila_romsel
     LDX #&00
 .store_copy_rom
     LDA &8000,X
@@ -2376,16 +2376,16 @@ GUARD &C000
     BNE store_copy_rom
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     AND #&7f
-    STA &fe30
+    STA sheila_romsel
     LDA #&ff
-    STA &93a6
+    STA store_flag
     RTS
 .alias_init
-    LDA &93a6
+    LDA store_flag
     BEQ alias_init_rts
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     ORA #&80
-    STA &fe30
+    STA sheila_romsel
     LDX #&00
 .store_restore_rom
     LDA &a655,X
@@ -2398,10 +2398,13 @@ GUARD &C000
     BNE store_restore_rom
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     AND #&7f
-    STA &fe30
+    STA sheila_romsel
 .alias_init_rts
     RTS
-    EQUB &FF, &24  \ &93A6: .$
+.store_flag
+    EQUB &FF
+.alias_file_handle
+    EQUB &24
 .parse_hex_digit
     CMP #&30
     BCC parse_hex_bad
@@ -2470,7 +2473,7 @@ GUARD &C000
     STA &a9
     LDA &a8
     AND #&07
-    STA &9c6e
+    STA mem_column
     EOR &a8
     STA &a8
     LDA #&16
@@ -2478,19 +2481,19 @@ GUARD &C000
     LDA #&07
     JSR oswrch
     LDA #&0a
-    STA &fe00
+    STA crtc_addr
     LDA #&20
-    STA &fe01
+    STA crtc_data
     LDX #&27
 .mem_copy_header
     LDA &9c7e,X
     STA &7c00,X
     DEX
     BPL mem_copy_header
-    LDA &027d
+    LDA os_wrch_dest
     STA &9c6c
     LDA #&01
-    STA &027d
+    STA os_wrch_dest
     LDA &0255
     STA &9c6d
     LDA #&02
@@ -2547,7 +2550,7 @@ GUARD &C000
     CMP #&48
     BEQ mem_handle_hex
     PLA
-    LDY &9c6e
+    LDY mem_column
     STA (&a8),Y
     JSR mem_cursor_down
     JMP mem_adjust_ptr
@@ -2555,14 +2558,14 @@ GUARD &C000
     PLA
     JSR parse_hex_digit
     BCS mem_adjust_ptr
-    STA &93a7
-    LDY &9c6e
+    STA alias_file_handle
+    LDY mem_column
     LDA (&a8),Y
     ASL A
     ASL A
     ASL A
     ASL A
-    ORA &93a7
+    ORA alias_file_handle
     STA (&a8),Y
     JMP mem_adjust_ptr
 .mem_dispatch
@@ -2577,13 +2580,13 @@ GUARD &C000
     JMP mem_adjust_ptr
 .mem_set_mode
     LDA &9c6c
-    STA &027d
+    STA os_wrch_dest
     LDA &9c6d
     STA &0255
     LDA #&0a
-    STA &fe00
+    STA crtc_addr
     LDA #&72
-    STA &fe01
+    STA crtc_data
     LDA #&1f
     JSR oswrch
     LDA #&00
@@ -2608,13 +2611,13 @@ GUARD &C000
 .mem_cursor_rts
     RTS
 .mem_cursor_down
-    LDA &9c6e
+    LDA mem_column
     INC A
-    STA &9c6e
+    STA mem_column
     CMP #&08
     BNE mem_cursor_rts
     LDA #&00
-    STA &9c6e
+    STA mem_column
     CLC
     LDA &a8
     ADC #&08
@@ -2750,9 +2753,9 @@ GUARD &C000
     INY
     CPY #&1b
     BNE dis_bracket_loop
-    LDA &9c6e
+    LDA mem_column
     ASL A
-    ADC &9c6e
+    ADC mem_column
     TAY
     LDA #&5d
     STA &7de6,Y
@@ -3055,7 +3058,7 @@ GUARD &C000
 .msg_now_spacing
     EQUS 13, "Now spacing out line:      " : EQUB 0
 .cmd_bau
-    LDA &0230
+    LDA os_mode
     CMP #&0c
     BEQ bau_splitting
     JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
@@ -3234,7 +3237,7 @@ GUARD &C000
     EQUS "KEY9REN.|F|K|M"     \ *KEY9 definition for renumber
     EQUB &0D
 .cmd_space
-    LDA &0230
+    LDA os_mode
     CMP #&0c
     BEQ space_setup
     JSR copy_inline_to_stack    \ BRK error: "Must be called from BASIC!"
@@ -3481,7 +3484,7 @@ GUARD &C000
     STA &a8
     RTS
 .cmd_lvar
-    LDA &0230
+    LDA os_mode
     CMP #&0c
     BEQ lvar_start
     JSR copy_inline_to_stack    \ BRK error: "VAR works only in BASIC"
