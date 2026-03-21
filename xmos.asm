@@ -2508,6 +2508,7 @@ GUARD &C000
     LDA #&00
     STA &ff
     RTS
+.L952B
     DEC &9C6E
     EQUB &10, &12  \ BPL &9542
     LDA #&07
@@ -2537,6 +2538,7 @@ GUARD &C000
     ADC #&00
     STA &a9
     RTS
+.L9561
     LDA #&81
     LDX #&ff
     LDY #&ff
@@ -2560,6 +2562,7 @@ GUARD &C000
     SBC #&00
     STA &A9
     RTS
+.L958A
     LDA #&81
     LDX #&ff
     LDY #&ff
@@ -2583,6 +2586,7 @@ GUARD &C000
     ADC #&00
     STA &A9
     RTS
+.L95B3
     LDA &7C27
     EOR #&09
     STA &7C27
@@ -3438,11 +3442,28 @@ GUARD &C000
     CPX #&80
     BNE L9C25
     RTS
-    EQUB &00, &00, &00, &12, &E3, &16, &01, &03, &02, &88, &89, &8A, &8B, &09, &2B, &95  \ &9C66: ..............+.
-    EQUB &43, &95, &8A, &95, &61, &95, &B3, &95, &82, &41, &44, &44, &52, &20, &94, &2C  \ &9C76: C...a....ADDR .,
-    EQUB &2C, &2C, &2C, &2C, &2C, &82, &48, &45, &58, &20, &43, &4F, &44, &45, &94, &2C  \ &9C86: ,,,,,.HEX CODE.,
-    EQUB &2C, &2C, &2C, &2C, &2C, &2C, &20, &82, &41, &53, &43, &49, &49, &20, &85, &41  \ &9C96: ,,,,,, .ASCII .A
-    EQUB &30, &31, &32, &33, &34, &35, &36, &37, &38, &39, &41, &42, &43, &44, &45, &46  \ &9CA6: 0123456789ABCDEF
+\ --- MEM editor configuration data ---
+.mem_workspace
+    EQUB &00, &00, &00         \ Workspace variables
+    EQUB &12, &E3, &16         \ VDU codes: text window? mode?
+    EQUB &01, &03, &02         \ Colour settings
+    EQUB &88, &89, &8A, &8B   \ Key codes: left, right, down, up
+    EQUB &09                   \ TAB key
+    EQUW L952B                 \ Address of cursor-up routine
+    EQUW L9543                 \ Address of cursor-down routine
+    EQUW L958A                 \ Address of page-down routine
+    EQUW L9561                 \ Address of page-up routine
+    EQUW L95B3                 \ Address of hex/ascii toggle
+\ --- MEM editor header display (uses VDU control codes) ---
+.mem_header
+    EQUB &82 : EQUS "ADDR " : EQUB &94
+    EQUS ",,,,,,"
+    EQUB &82 : EQUS "HEX CODE" : EQUB &94
+    EQUS ",,,,,,, "
+    EQUB &82 : EQUS "ASCII " : EQUB &85
+\ --- Hex digit lookup table ---
+.hex_digits
+    EQUS "A0123456789ABCDEF"
 .L9CB6
     INY
 .L9CB7
