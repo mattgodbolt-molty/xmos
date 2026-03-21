@@ -2508,8 +2508,17 @@ GUARD &C000
     LDA #&00
     STA &ff
     RTS
-    EQUB &CE, &6E, &9C, &10, &12, &A9, &07, &8D, &6E, &9C, &38, &A5, &A8, &E9, &08, &85  \ &952B: .n......n.8.....
-    EQUB &A8, &A5, &A9, &E9, &00, &85, &A9  \ &953B: .......
+    DEC &9C6E
+    EQUB &10, &12  \ BPL &9542
+    LDA #&07
+    STA &9C6E
+    SEC
+    LDA &A8
+    SBC #&08
+    STA &A8
+    LDA &A9
+    SBC #&00
+    STA &A9
 .L9542
     RTS
 .L9543
@@ -2699,14 +2708,47 @@ GUARD &C000
     TAX
     LDA &9ca6,X
     JMP oswrch
-    EQUB &81, &3F, &3F, &3F, &00, &23, &26, &6C, &00, &26, &68, &6C, &00, &26, &6C, &00  \ &9687: .???.#&l.&hl.&l.
-    EQUB &41, &00, &20, &00, &28, &26, &6C, &2C, &58, &29, &00, &28, &26, &6C, &29, &2C  \ &9697: A. .(&l,X).(&l),
-    EQUB &59, &00, &26, &6C, &2C, &58, &00, &26, &6C, &2C, &59, &00, &26, &68, &6C, &2C  \ &96A7: Y.&l,X.&l,Y.&hl,
-    EQUB &58, &00, &26, &68, &6C, &2C, &59, &00, &26, &62, &00, &28, &26, &68, &6C, &29  \ &96B7: X.&hl,Y.&b.(&hl)
-    EQUB &00, &28, &26, &68, &6C, &2C, &58, &29, &00, &28, &26, &6C, &29, &00, &87, &96  \ &96C7: .(&hl,X).(&l)...
-    EQUB &8C, &96, &90, &96, &94, &96, &97, &96, &99, &96, &9B, &96, &A2, &96, &A9, &96  \ &96D7: ................
-    EQUB &AE, &96, &B3, &96, &B9, &96, &BF, &96, &C2, &96, &C8, &96, &D0, &96, &01, &02  \ &96E7: ................
-    EQUB &03, &02, &01, &01, &02, &02, &02, &02, &03, &03, &02, &03, &03, &02  \ &96F7: ..............
+\ --- Disassembler addressing mode format strings ---
+\ &l = low byte, &hl = high+low bytes, &b = branch offset
+.dis_addr_modes
+    EQUB &81                   \ Mode 0: ??? (invalid opcode)
+    EQUS "???", 0
+    EQUS "#&l", 0             \ Mode 1: immediate
+    EQUS "&hl", 0             \ Mode 2: absolute
+    EQUS "&l", 0              \ Mode 3: zero page
+    EQUS "A", 0               \ Mode 4: accumulator
+    EQUS " ", 0               \ Mode 5: implied
+    EQUS "(&l,X)", 0          \ Mode 6: (indirect,X)
+    EQUS "(&l),Y", 0          \ Mode 7: (indirect),Y
+    EQUS "&l,X", 0            \ Mode 8: zero page,X
+    EQUS "&l,Y", 0            \ Mode 9: zero page,Y
+    EQUS "&hl,X", 0           \ Mode 10: absolute,X
+    EQUS "&hl,Y", 0           \ Mode 11: absolute,Y
+    EQUS "&b", 0              \ Mode 12: relative (branch)
+    EQUS "(&hl)", 0           \ Mode 13: (indirect)
+    EQUS "(&hl,X)", 0         \ Mode 14: (indirect,X) 65C02
+    EQUS "(&l)", 0            \ Mode 15: (indirect) 65C02 ZP
+\ --- Addressing mode pointer table (16 entries, low/high pairs) ---
+.dis_addr_mode_ptrs
+    EQUW dis_addr_modes + &00  \ Mode 0: ???
+    EQUW dis_addr_modes + &05  \ Mode 1: #&l
+    EQUW dis_addr_modes + &09  \ Mode 2: &hl
+    EQUW dis_addr_modes + &0D  \ Mode 3: &l
+    EQUW dis_addr_modes + &10  \ Mode 4: A
+    EQUW dis_addr_modes + &12  \ Mode 5: implied
+    EQUW dis_addr_modes + &14  \ Mode 6: (&l,X)
+    EQUW dis_addr_modes + &1B  \ Mode 7: (&l),Y
+    EQUW dis_addr_modes + &22  \ Mode 8: &l,X
+    EQUW dis_addr_modes + &27  \ Mode 9: &l,Y
+    EQUW dis_addr_modes + &2C  \ Mode 10: &hl,X
+    EQUW dis_addr_modes + &32  \ Mode 11: &hl,Y
+    EQUW dis_addr_modes + &38  \ Mode 12: &b
+    EQUW dis_addr_modes + &3B  \ Mode 13: (&hl)
+    EQUW dis_addr_modes + &41  \ Mode 14: (&hl,X)
+    EQUW dis_addr_modes + &49  \ Mode 15: (&l)
+\ --- Operand byte counts per addressing mode ---
+.dis_operand_sizes
+    EQUB 1, 2, 3, 2, 1, 1, 2, 2, 2, 2, 3, 3, 2, 3, 3, 2
 .cmd_dis
     JSR L901F
     CMP #&0d
