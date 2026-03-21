@@ -373,25 +373,25 @@ GUARD &C000
 \ Terminated by &FF
 \ ============================================================================
 .command_table
-    EQUS "ALIAS"    : EQUB 0 : EQUW cmd_alias    : EQUS "<alias name> <alias>" : EQUB 0
-    EQUS "ALIASES"  : EQUB 0 : EQUW cmd_aliases  : EQUS "Shows active aliases" : EQUB 0
-    EQUS "ALICLR"   : EQUB 0 : EQUW cmd_aliclr   : EQUS "Clears all aliases" : EQUB 0
-    EQUS "ALILD"    : EQUB 0 : EQUW cmd_alild    : EQUS "Loads alias file" : EQUB 0
-    EQUS "ALISV"    : EQUB 0 : EQUW cmd_alisv    : EQUS "Saves alias file" : EQUB 0
-    EQUS "BAU"      : EQUB 0 : EQUW cmd_bau      : EQUS "Splits to single commands" : EQUB 0
-    EQUS "DEFKEYS"  : EQUB 0 : EQUW cmd_defkeys  : EQUS "Defines new keys" : EQUB 0
-    EQUS "DIS"      : EQUB 0 : EQUW cmd_dis      : EQUS "<addr> - disassemble memory" : EQUB 0
-    EQUS "KEYON"    : EQUB 0 : EQUW cmd_keyon    : EQUS "Enables redefined keys" : EQUB 0
-    EQUS "KEYOFF"   : EQUB 0 : EQUW cmd_keyoff   : EQUS "Disables redefined keys" : EQUB 0
-    EQUS "KSTATUS"  : EQUB 0 : EQUW cmd_kstatus  : EQUS "Displays KEYON status" : EQUB 0
-    EQUS "L"        : EQUB 0 : EQUW cmd_l        : EQUS "Selects mode 128" : EQUB 0
-    EQUS "LVAR"     : EQUB 0 : EQUW cmd_lvar     : EQUS "Shows current variables" : EQUB 0
-    EQUS "MEM"      : EQUB 0 : EQUW cmd_mem      : EQUS "<addr> - memory editor" : EQUB 0
-    EQUS "S"        : EQUB 0 : EQUW cmd_s        : EQUS "Saves BASIC with incore name" : EQUB 0
-    EQUS "SPACE"    : EQUB 0 : EQUW cmd_space    : EQUS "Inserts spaces into programs" : EQUB 0
-    EQUS "STORE"    : EQUB 0 : EQUW cmd_store    : EQUS "Keeps function keys on break" : EQUB 0
-    EQUS "XON"      : EQUB 0 : EQUW cmd_xon      : EQUS "Enables extended input" : EQUB 0
-    EQUS "XOFF"     : EQUB 0 : EQUW cmd_xoff     : EQUS "Disables extended input" : EQUB 0
+    EQUS "ALIAS", 0    : EQUW cmd_alias    : EQUS "<alias name> <alias>", 0
+    EQUS "ALIASES", 0  : EQUW cmd_aliases  : EQUS "Shows active aliases", 0
+    EQUS "ALICLR", 0   : EQUW cmd_aliclr   : EQUS "Clears all aliases", 0
+    EQUS "ALILD", 0    : EQUW cmd_alild    : EQUS "Loads alias file", 0
+    EQUS "ALISV", 0    : EQUW cmd_alisv    : EQUS "Saves alias file", 0
+    EQUS "BAU", 0      : EQUW cmd_bau      : EQUS "Splits to single commands", 0
+    EQUS "DEFKEYS", 0  : EQUW cmd_defkeys  : EQUS "Defines new keys", 0
+    EQUS "DIS", 0      : EQUW cmd_dis      : EQUS "<addr> - disassemble memory", 0
+    EQUS "KEYON", 0    : EQUW cmd_keyon    : EQUS "Enables redefined keys", 0
+    EQUS "KEYOFF", 0   : EQUW cmd_keyoff   : EQUS "Disables redefined keys", 0
+    EQUS "KSTATUS", 0  : EQUW cmd_kstatus  : EQUS "Displays KEYON status", 0
+    EQUS "L", 0        : EQUW cmd_l        : EQUS "Selects mode 128", 0
+    EQUS "LVAR", 0     : EQUW cmd_lvar     : EQUS "Shows current variables", 0
+    EQUS "MEM", 0      : EQUW cmd_mem      : EQUS "<addr> - memory editor", 0
+    EQUS "S", 0        : EQUW cmd_s        : EQUS "Saves BASIC with incore name", 0
+    EQUS "SPACE", 0    : EQUW cmd_space    : EQUS "Inserts spaces into programs", 0
+    EQUS "STORE", 0    : EQUW cmd_store    : EQUS "Keeps function keys on break", 0
+    EQUS "XON", 0      : EQUW cmd_xon      : EQUS "Enables extended input", 0
+    EQUS "XOFF", 0     : EQUW cmd_xoff     : EQUS "Disables extended input", 0
     EQUB &FF                  \ End of command table
 .xmos_keyword
     EQUS "XMOS"
@@ -797,13 +797,13 @@ GUARD &C000
 }
 .error_no_incore_name
     JSR copy_inline_to_stack    \ BRK error: "No incore filename"
-    EQUB &43 : EQUS "No incore filename" : EQUB 0
+    EQUS &43, "No incore filename", 0
 .error_no_basic
     JSR copy_inline_to_stack    \ BRK error: "No BASIC program"
-    EQUB &44 : EQUS "No BASIC program" : EQUB 0
+    EQUS &44, "No BASIC program", 0
 .error_bad_program
     JSR copy_inline_to_stack    \ BRK error: "Bad program"
-    EQUB &01 : EQUS "Bad program" : EQUB 0
+    EQUS &01, "Bad program", 0
 .set_filename_and_return
     INY                         \ Skip past '>'
     STY osfile_block            \ Set filename offset in parameter block
@@ -960,13 +960,13 @@ GUARD &C000
 .L8D64
     RTS
 .msg_keys_redefined
-    EQUB &0D : EQUS "Keys now redefined" : EQUB &0D, 0
+    EQUS 13, "Keys now redefined", 13, 0
 .msg_keyon_already
-    EQUB &0D : EQUS "'KEYON' already executed!" : EQUB &0D, &07, 0
+    EQUS 13, "'KEYON' already executed!", 13, 7, 0
 .msg_keys_off
-    EQUB &0D : EQUS "Redefined keys off" : EQUB &0D, 0
+    EQUS 13, "Redefined keys off", 13, 0
 .msg_keys_on
-    EQUB &0D : EQUS "Redefined keys on, and are:" : EQUB &0D, &0D, 0  \ &8DC5: re:...
+    EQUS 13, "Redefined keys on, and are:", 13, 13, 0  \ &8DC5: re:...
 \ ============================================================================
 \ *KEYOFF — Disable redefined keys
 \ ============================================================================
@@ -1002,7 +1002,7 @@ GUARD &C000
     EQUB &03 : EQUS "SHIFT    "
     EQUB &04 : EQUS "CTRL     "
     EQUB &1B : EQUS "ESCAPE   "
-    EQUB &0D : EQUS "RETURN   "
+    EQUS 13, "RETURN   "
     EQUB &20 : EQUS "SPACE    "
     EQUB &7F : EQUS "DELETE   "
     EQUB &8B : EQUS "COPY     "
@@ -1319,7 +1319,7 @@ GUARD &C000
     CMP #&be
     BCC L90E6
     JSR copy_inline_to_stack    \ BRK error: "No room for alias"
-    EQUB &48 : EQUS "No room for alias" : EQUB 0
+    EQUS &48, "No room for alias", 0
 .L90E6
     CLC
     LDA &f2
@@ -1423,7 +1423,7 @@ GUARD &C000
     RTS
 .L9190
     JSR copy_inline_to_stack    \ BRK error: "Syntax : ALIAS <alias name> <alias>"
-    EQUB &48 : EQUS "Syntax : ALIAS <alias name> <alias>" : EQUB 0
+    EQUS &48, "Syntax : ALIAS <alias name> <alias>", 0
 .check_alias
     LDA #&65
     STA &a8
@@ -1587,7 +1587,7 @@ GUARD &C000
     JMP osfind
 .L92C8
     JSR copy_inline_to_stack    \ BRK error: "Alias file not found"
-    EQUB &D6 : EQUS "Alias file not found" : EQUB 0
+    EQUS &D6, "Alias file not found", 0
 .cmd_alisv
     JSR L901F
     CLC
@@ -1626,7 +1626,7 @@ GUARD &C000
     JMP osfind
 .L9326
     JSR copy_inline_to_stack    \ BRK error: "Can't open alias file"
-    EQUB &63 : EQUS "Can't open alias file" : EQUB 0
+    EQUS &63, "Can't open alias file", 0
 .cmd_aliclr
     LDA #&ff
     STA &b165
@@ -1707,7 +1707,7 @@ GUARD &C000
     JSR L93A8
     BCC L93ED
     JSR copy_inline_to_stack    \ BRK error: "Invalid hex digit"
-    EQUB &EB : EQUS "Invalid hex digit" : EQUB 0
+    EQUS &EB, "Invalid hex digit", 0
 .L93ED
     ASL &ae
     ROL &af
@@ -2233,15 +2233,15 @@ GUARD &C000
 .L9888
     RTS
 .msg_now_splitting
-    EQUB &0D : EQUS "Now splitting line:      " : EQUB 0
+    EQUS 13, "Now splitting line:      " : EQUB 0
 .msg_now_spacing
-    EQUB &0D : EQUS "Now spacing out line:      " : EQUB 0
+    EQUS 13, "Now spacing out line:      " : EQUB 0
 .cmd_bau
     LDA &0230
     CMP #&0c
     BEQ L98EA
     JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
-    EQUB &5C : EQUS "BAU must be called from BASIC" : EQUB 0
+    EQUS &5C, "BAU must be called from BASIC", 0
 .L98EA
     LDX #&00
 .L98EC
@@ -2427,7 +2427,7 @@ GUARD &C000
     CMP #&0c
     BEQ L9A55
     JSR copy_inline_to_stack    \ BRK error: "Must be called from BASIC!"
-    EQUB &5C : EQUS "Must be called from BASIC!" : EQUB 0
+    EQUS &5C, "Must be called from BASIC!", 0
 .L9A55
     LDA &18
     STA &a9
@@ -2680,7 +2680,7 @@ GUARD &C000
     CMP #&0c
     BEQ L9C23
     JSR copy_inline_to_stack    \ BRK error: "VAR works only in BASIC"
-    EQUB &4C : EQUS "VAR works only in BASIC" : EQUB 0
+    EQUS &4C, "VAR works only in BASIC", 0
 .L9C23
     LDX #&00
 .L9C25
