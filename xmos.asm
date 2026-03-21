@@ -2202,7 +2202,7 @@ GUARD &C000
     LDA (&a8),Y
     INY
     STY alias_file_handle
-    STA &a55b,X
+    STA store_buf_3,X
     INX
     CMP #&0d
     BNE alias_check_percent
@@ -2249,7 +2249,7 @@ GUARD &C000
     CMP #&0d
     BEQ alias_next_expand
     BEQ alias_next_expand
-    STA &a55b,X
+    STA store_buf_3,X
     INX
     INY
     BNE alias_copy_param_loop
@@ -2365,11 +2365,11 @@ GUARD &C000
     LDX #&00
 .store_copy_rom
     LDA &8000,X
-    STA &a655,X
+    STA store_buf_0,X
     LDA &8100,X
-    STA &a755,X
+    STA store_buf_1,X
     LDA &8200,X
-    STA &a855,X
+    STA store_buf_2,X
     LDA &8300,X
     STA &a955,X
     INX
@@ -2388,11 +2388,11 @@ GUARD &C000
     STA sheila_romsel
     LDX #&00
 .store_restore_rom
-    LDA &a655,X
+    LDA store_buf_0,X
     STA &8000,X
-    LDA &a755,X
+    LDA store_buf_1,X
     STA &8100,X
-    LDA &a855,X
+    LDA store_buf_2,X
     STA &8200,X
     INX
     BNE store_restore_rom
@@ -3570,7 +3570,7 @@ GUARD &C000
     INY
 .lvar_parse_token
     LDA #&00
-    STA &a154
+    STA lvar_indent
     LDA (&a8),Y
     CMP #&0d
     BNE lvar_check_dot
@@ -3631,7 +3631,7 @@ GUARD &C000
     BRA lvar_parse_token
 .lvar_set_indent
     LDA #&03
-    STA &a154
+    STA lvar_indent
 .lvar_print_token
     INY
     LDA (&a8),Y
@@ -3639,7 +3639,7 @@ GUARD &C000
     BEQ lvar_done
     CMP #&0d
     BEQ lvar_end_of_line
-    DEC &a154
+    DEC lvar_indent
     BNE lvar_print_token
     CMP #&3a
     BEQ lvar_parse_token
@@ -3829,25 +3829,25 @@ GUARD &C000
     CMP #&45
     BNE token_check_80
     LDA #&04
-    STA &a154
+    STA lvar_indent
     BRA token_found
 .token_check_80
     CMP #&80
     BNE token_check_82
     LDA #&01
-    STA &a154
+    STA lvar_indent
     BRA token_found
 .token_check_82
     CMP #&82
     BNE token_check_84
     LDA #&01
-    STA &a154
+    STA lvar_indent
     BRA token_found
 .token_check_84
     CMP #&84
     BNE token_not_found
     LDA #&02
-    STA &a154
+    STA lvar_indent
     BRA token_found
 .token_not_found
     CLC
@@ -3912,7 +3912,8 @@ GUARD &C000
     EQUB 0
 
 \ Remaining ROM data
-    EQUB &00
+.lvar_indent
+    EQUB &00                   \ LVAR indentation counter
 .xi_alias_count
     EQUB &FF, &42, &52, &4B, &05, &4F, &52, &41, &06, &00, &00, &00, &00, &00, &00
     EQUB &00, &00, &54, &53, &42, &03, &4F, &52, &41, &03, &41, &53, &4C, &03, &00, &00

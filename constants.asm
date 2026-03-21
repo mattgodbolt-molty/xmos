@@ -76,3 +76,9 @@ crtc_data      = &FE01         \ 6845 CRTC data register
 
 \ --- Default vectors ---
 default_keyv   = &EF39         \ Default KEYV handler address
+
+\ --- STORE buffer pages (in sideways RAM) ---
+store_buf_0 = &A655            \ *STORE buffer for ROM page 0 (&8000-&80FF)
+store_buf_1 = &A755            \ *STORE buffer for ROM page 1 (&8100-&81FF)
+store_buf_2 = &A855            \ *STORE buffer for ROM page 2 (&8200-&82FF)
+store_buf_3 = &A55B            \ *STORE buffer for ROM page 3 (&8300-&83FF)
