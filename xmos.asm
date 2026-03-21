@@ -453,12 +453,12 @@ GUARD &C000
     LDA #&00
     STA &AA                     \ Workspace pointer low = 0
     STA &020C                   \ OSHWM low byte = 0
-    JSR L9379                   \ Initialise alias system
+    JSR alias_init                   \ Initialise alias system
     LDA keyon_active
     BEQ reset_skip_keyon
     LDA #&00
     STA keyon_active
-    JSR L8C89                   \ Re-enable KEYON if it was active
+    JSR keyon_setup                   \ Re-enable KEYON if it was active
 .reset_skip_keyon
     LDA xon_flag
     BEQ reset_skip_xon
@@ -784,13 +784,13 @@ GUARD &C000
     SBC xi_line_len
     BEQ xi_cr_finish
     TAX
-.L86E7
+.xi_cr_fwd_loop
     LDA #&09
     JSR oswrch
     DEX
-    BNE L86E7
+    BNE xi_cr_fwd_loop
 .xi_cr_finish
-    JSR L9D88
+    JSR xi_support_entry
     LDY xi_cursor_pos
     LDA #&0d
     STA (&a8),Y
@@ -810,11 +810,11 @@ GUARD &C000
     SBC xi_line_len
     BEQ xi_cr_sec_return
     TAX
-.L8717
+.xi_cr_fwd_loop2
     LDA #&09
     JSR oswrch
     DEX
-    BNE L8717
+    BNE xi_cr_fwd_loop2
 .xi_cr_sec_return
     LDY xi_cursor_pos
     SEC
@@ -874,11 +874,11 @@ GUARD &C000
     STA xi_insert_mode
     LDA xi_cursor_pos
     BEQ xi_copy_up_jmp
-    JSR L9D88
+    JSR xi_support_entry
 .xi_copy_up_inc
     INC xi_scroll_count
 .xi_copy_up_jmp
-    JMP L9DFE
+    JMP xi_supp_restore
 .xi_copy_up_has_key
     LDA xi_cursor_pos
     BNE xi_copy_up_calc
@@ -924,10 +924,10 @@ GUARD &C000
     BNE xi_copy_down_dec
     LDA #&ff
     STA xi_insert_mode
-    JSR L9D88
+    JSR xi_support_entry
 .xi_copy_down_dec
     DEC xi_scroll_count
-    JMP L9DFE
+    JMP xi_supp_restore
 .xi_copy_down_has_key
     LDA xi_cursor_pos
     BNE xi_copy_down_calc
@@ -1476,14 +1476,14 @@ GUARD &C000
 .key_remap_scan
     CPY #&FF
     BNE key_remap_pass2
-    CPX #&9E : BNE L8BF6 : LDX #&BF
-.L8BF6
-    CPX #&BD : BNE L8BFC : LDX #&FE
-.L8BFC
-    CPX #&B7 : BNE L8C02 : LDX #&B7
-.L8C02
-    CPX #&97 : BNE L8C08 : LDX #&97
-.L8C08
+    CPX #&9E : BNE kr_check_bd : LDX #&BF
+.kr_check_bd
+    CPX #&BD : BNE kr_check_b7 : LDX #&FE
+.kr_check_b7
+    CPX #&B7 : BNE kr_check_97 : LDX #&B7
+.kr_check_97
+    CPX #&97 : BNE kr_check_b6 : LDX #&97
+.kr_check_b6
     CPX #&B6 : BNE key_remap_pass2 : LDX #&B6
 .key_remap_pass2
     PLP
@@ -1492,16 +1492,16 @@ GUARD &C000
 .key_remap_keyboard
     CPX #&80
     BCC key_remap_shifted
-    CPX #&E1 : BNE L8C1C : LDX #&C0
-.L8C1C
-    CPX #&C2 : BNE L8C22 : LDX #&81
-.L8C22
-    CPX #&C8 : BNE L8C28 : LDX #&C8
-.L8C28
-    CPX #&E8 : BNE L8C2E : LDX #&E8
-.L8C2E
-    CPX #&C9 : BNE L8C34 : LDX #&C9
-.L8C34
+    CPX #&E1 : BNE kr_check_c2 : LDX #&C0
+.kr_check_c2
+    CPX #&C2 : BNE kr_check_c8 : LDX #&81
+.kr_check_c8
+    CPX #&C8 : BNE kr_check_e8 : LDX #&C8
+.kr_check_e8
+    CPX #&E8 : BNE kr_check_c9 : LDX #&E8
+.kr_check_c9
+    CPX #&C9 : BNE kr_pass3 : LDX #&C9
+.kr_pass3
     PLP
 .key_remap_jmp3
     JMP &FFFF                  \ Patched: original KEYV address
@@ -1510,16 +1510,16 @@ GUARD &C000
 .key_remap_jsr
     JSR &FFFF                  \ Patched: call original KEYV
     PHP
-    CPX #&40 : BNE L8C45 : LDX #&E1 : STX &EC : LDX #&61
-.L8C45
-    CPX #&01 : BNE L8C4F : LDX #&C2 : STX &EC : LDX #&42
-.L8C4F
-    CPX #&48 : BNE L8C59 : LDX #&C8 : STX &EC : LDX #&48
-.L8C59
-    CPX #&68 : BNE L8C63 : LDX #&E8 : STX &EC : LDX #&68
-.L8C63
-    CPX #&49 : BNE L8C6D : LDX #&C9 : STX &EC : LDX #&49
-.L8C6D
+    CPX #&40 : BNE kr_shift_01 : LDX #&E1 : STX &EC : LDX #&61
+.kr_shift_01
+    CPX #&01 : BNE kr_shift_48 : LDX #&C2 : STX &EC : LDX #&42
+.kr_shift_48
+    CPX #&48 : BNE kr_shift_68 : LDX #&C8 : STX &EC : LDX #&48
+.kr_shift_68
+    CPX #&68 : BNE kr_shift_49 : LDX #&E8 : STX &EC : LDX #&68
+.kr_shift_49
+    CPX #&49 : BNE kr_shift_done : LDX #&C9 : STX &EC : LDX #&49
+.kr_shift_done
     PLP
     RTS
 
@@ -1530,12 +1530,12 @@ GUARD &C000
 .keyon_active
     EQUB &00                   \ &8C73: non-zero = KEYON active
     EQUB &41, &02, &49, &69, &4A  \ &8C74: workspace
-.L8C79
+.keyon_already_msg
     STROUT msg_keyon_already
-    JMP L8D64
-.L8C89
+    JMP keyon_rts
+.keyon_setup
     LDA keyon_active
-    BNE L8C79
+    BNE keyon_already_msg
     LDA #&01
     STA keyon_active
     LDA &020a
@@ -1611,20 +1611,20 @@ GUARD &C000
     SBC #&01
     STA &8c66
     LDX #&00
-.L8D40
+.keyon_copy_handler
     LDA &8bdf,X
     STA &d100,X
     INX
-    BNE L8D40
+    BNE keyon_copy_handler
     LDA #&00
     STA &020a
     LDA #&d1
     STA &020b
     RTS
 .cmd_keyon
-    JSR L8C89
+    JSR keyon_setup
     STROUT msg_keys_redefined
-.L8D64
+.keyon_rts
     RTS
 .msg_keys_redefined
     EQUS 13, "Keys now redefined", 13, 0
@@ -1648,7 +1648,7 @@ GUARD &C000
     STA &020B
 .keyoff_print_msg
     STROUT msg_keys_off
-    JMP L8D64
+    JMP keyon_rts
 
 \ --- Key name lookup table ---
 \ Each entry: key code byte, then 9-char padded name
@@ -1669,32 +1669,32 @@ GUARD &C000
     EQUB &8E : EQUS "DOWN     "
     EQUB &8F : EQUS "UP       "
     EQUB &E0 : EQUS "BREAK!!! "
-.L8E87
+.keyname_lookup
     CMP #&00
-    BNE L8E8F
+    BNE keyname_check_caps
     LDA #&03
-    BNE L8EA4
-.L8E8F
+    BNE keyname_search
+.keyname_check_caps
     CMP #&01
-    BNE L8E97
+    BNE keyname_from_table
     LDA #&04
-    BNE L8EA4
-.L8E97
+    BNE keyname_search
+.keyname_from_table
     LDX &023c
     STX &a8
     LDX &023d
     STX &a9
     TAY
     LDA (&a8),Y
-.L8EA4
+.keyname_search
     LDX #&f1
     STX &a8
     LDX #&8d
     STX &a9
     LDY #&00
-.L8EAE
+.keyname_scan_loop
     CMP (&a8),Y
-    BEQ L8EC3
+    BEQ keyname_found
     INY
     INY
     INY
@@ -1706,17 +1706,17 @@ GUARD &C000
     INY
     INY
     CPY #&96
-    BCC L8EAE
+    BCC keyname_scan_loop
     JMP oswrch
-.L8EC3
+.keyname_found
     LDX #&09
     INY
-.L8EC6
+.keyname_print_loop
     LDA (&a8),Y
     JSR oswrch
     INY
     DEX
-    BNE L8EC6
+    BNE keyname_print_loop
     RTS
 \ --- DEFKEYS joystick direction labels (12 chars each) ---
 .defkeys_direction_labels
@@ -1740,14 +1740,14 @@ GUARD &C000
     LDA #&8e
     STA &ab
     LDX #&00
-.L8F2B
+.kstatus_entry_loop
     LDY #&00
-.L8F2D
+.kstatus_print_dir
     LDA (&aa),Y
     JSR oswrch
     INY
     CPY #&0c
-    BNE L8F2D
+    BNE kstatus_print_dir
     CLC
     LDA &aa
     ADC #&0c
@@ -1758,14 +1758,14 @@ GUARD &C000
     LDA &8c74,X
     PHX
     DEC A
-    JSR L8E87
+    JSR keyname_lookup
     JSR osnewl
     PLX
     INX
     CPX #&05
-    BNE L8F2B
+    BNE kstatus_entry_loop
     JSR osnewl
-    JMP L8D64
+    JMP keyon_rts
 .msg_key_redefiner
     EQUS "KEY REDEFINER"
     EQUB &0D
@@ -1773,20 +1773,20 @@ GUARD &C000
     EQUB &0D, 0
 .cmd_defkeys
     LDA keyon_active
-    BEQ L8F8E
+    BEQ defkeys_start
     LDA #&00
     STA keyon_active
     LDA saved_keyv_lo
     STA &020a
     LDA saved_keyv_hi
     STA &020b
-.L8F8E
+.defkeys_start
     LDA #&81
     LDX #&b6
     LDY #&ff
     JSR osbyte
     CPX #&ff
-    BEQ L8F8E
+    BEQ defkeys_start
     JSR osnewl
     STROUT msg_key_redefiner
     JSR osnewl
@@ -1795,14 +1795,14 @@ GUARD &C000
     LDA #&8e
     STA &ab
     LDX #&00
-.L8FB8
+.defkeys_header_y
     LDY #&00
-.L8FBA
+.defkeys_header_loop
     LDA (&aa),Y
     JSR oswrch
     INY
     CPY #&0c
-    BNE L8FBA
+    BNE defkeys_header_loop
     CLC
     LDA &aa
     ADC #&0c
@@ -1810,30 +1810,30 @@ GUARD &C000
     LDA &ab
     ADC #&00
     STA &ab
-    JSR L8FE4
+    JSR defkeys_wait_key
     INX
     CPX #&05
-    BNE L8FB8
+    BNE defkeys_header_y
     JSR osnewl
     LDA #&0f
     JSR osbyte
-    JMP L8C89
-.L8FE4
+    JMP keyon_setup
+.defkeys_wait_key
     PHX
-.L8FE5
+.defkeys_read_key
     LDX #&81
-.L8FE7
+.defkeys_store_key
     PHX
     LDA #&81
     LDY #&ff
     JSR osbyte
     CPX #&ff
-    BEQ L8FF9
+    BEQ defkeys_check_match
     PLX
     INX
-    BNE L8FE7
-    BEQ L8FE5
-.L8FF9
+    BNE defkeys_store_key
+    BEQ defkeys_read_key
+.defkeys_check_match
     PLA
     EOR #&ff
     INC A
@@ -1842,33 +1842,33 @@ GUARD &C000
     DEC A
     PHX
     PHA
-    JSR L8E87
+    JSR keyname_lookup
     JSR osnewl
     PLA
     EOR #&ff
     TAX
     PHX
-.L900F
+.defkeys_next_entry
     PLX
     PHX
     LDA #&81
     LDY #&ff
     JSR osbyte
     CPX #&ff
-    BEQ L900F
+    BEQ defkeys_next_entry
     PLX
     PLX
     RTS
-.L901F
+.parse_cmdline
     LDY &8a67
     DEY
-.L9023
+.parse_skip_spaces
     INY
     LDA (&f2),Y
     CMP #&20
-    BEQ L9023
+    BEQ parse_skip_spaces
     CMP #&2e
-    BEQ L9023
+    BEQ parse_skip_spaces
     STY &8a67
     RTS
 .alias_semicolon_flag
@@ -1876,32 +1876,32 @@ GUARD &C000
 .cmd_alias
     LDA #&00
     STA alias_semicolon_flag
-    JSR L901F
+    JSR parse_cmdline
     CMP #&0d
-    BNE L9042
-    JMP L9190
-.L9042
+    BNE alias_table_start
+    JMP alias_syntax_error
+.alias_table_start
     LDA #&65
     STA &a8
     LDA #&b1
     STA &a9
-.L904A
+.alias_check_end
     EQUB &B2, &A8  \ LDA (0xa8)
     CMP #&ff
-    BEQ L90B0
+    BEQ alias_exec_setup
     LDY &8a67
     PHY
     JSR compare_string
     PLY
     STY &8a67
-    BCC L9098
+    BCC alias_find_end
     LDA #&ff
     STA alias_semicolon_flag
     LDY #&ff
-.L9064
+.alias_skip_name
     INY
     LDA (&a8),Y
-    BNE L9064
+    BNE alias_skip_name
     INY
     LDA (&a8),Y
     CLC
@@ -1911,30 +1911,30 @@ GUARD &C000
     ADC #&00
     STA &ab
     LDY #&00
-.L9079
+.alias_copy_loop
     LDA (&aa),Y
     STA (&a8),Y
     CMP #&ff
-    BNE L908B
+    BNE alias_copy_next
     STA (&a8),Y
     EQUB &B2, &A8  \ LDA (0xa8)
     CMP #&ff
-    BNE L9098
-    BEQ L90B0
-.L908B
+    BNE alias_find_end
+    BEQ alias_exec_setup
+.alias_copy_next
     INY
-    BNE L9079
+    BNE alias_copy_loop
     INC &ac
     INC &aa
     LDA &aa
     CMP #&bf
-    BCC L9079
-.L9098
+    BCC alias_copy_loop
+.alias_find_end
     LDY #&ff
-.L909A
+.alias_find_loop
     INY
     LDA (&a8),Y
-    BNE L909A
+    BNE alias_find_loop
     INY
     LDA (&a8),Y
     CLC
@@ -1943,29 +1943,29 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L904A
-.L90B0
+    JMP alias_check_end
+.alias_exec_setup
     LDA &8a67
     STA &70
     LDY &8a67
     DEY
-.L90B9
+.alias_exec_copy
     INY
     LDA (&f2),Y
     CMP #&0d
-    BNE L90B9
+    BNE alias_exec_copy
     TYA
     SEC
     SBC &8a67
     CLC
     ADC &a8
-    BCC L90E6
+    BCC alias_exec_run
     LDA &a9
     CMP #&be
-    BCC L90E6
+    BCC alias_exec_run
     JSR copy_inline_to_stack    \ BRK error: "No room for alias"
     EQUS &48, "No room for alias", 0
-.L90E6
+.alias_exec_run
     CLC
     LDA &f2
     ADC &8a67
@@ -1974,24 +1974,24 @@ GUARD &C000
     ADC #&00
     STA &f3
     LDY #&00
-.L90F6
+.alias_skip_ws
     LDA (&f2),Y
     CMP #&20
-    BEQ L9112
+    BEQ alias_terminate
     CMP #&0d
-    BNE L9103
-    JMP L9186
-.L9103
+    BNE alias_upper_case
+    JMP alias_clear_entry
+.alias_upper_case
     CMP #&61
-    BCC L910D
+    BCC alias_store_char
     CMP #&7b
-    BCS L910D
+    BCS alias_store_char
     AND #&df
-.L910D
+.alias_store_char
     STA (&a8),Y
     INY
-    BNE L90F6
-.L9112
+    BNE alias_skip_ws
+.alias_terminate
     LDA #&00
     STA (&a8),Y
     INY
@@ -2004,14 +2004,14 @@ GUARD &C000
     STA &f3
     STY &8a67
     INY
-.L9128
+.alias_parse_arg
     LDA (&f2),Y
     CMP #&0d
-    BEQ L9133
+    BEQ alias_store_arg
     STA (&a8),Y
     INY
-    BNE L9128
-.L9133
+    BNE alias_parse_arg
+.alias_store_arg
     STA (&a8),Y
     INY
     LDA #&ff
@@ -2025,17 +2025,17 @@ GUARD &C000
     STA &a8
     LDA #&b1
     STA &a9
-.L9149
+.alias_list_check
     EQUB &B2, &A8  \ LDA (0xa8)
     CMP #&ff
-    BEQ L9185
+    BEQ alias_list_done
     LDY #&ff
-.L9151
+.alias_list_name
     INY
     LDA (&a8),Y
     JSR osasci
     CMP #&00
-    BNE L9151
+    BNE alias_list_name
     INY
     LDA #&20
     JSR osasci
@@ -2043,12 +2043,12 @@ GUARD &C000
     JSR osasci
     LDA #&20
     JSR osasci
-.L916B
+.alias_list_value
     INY
     LDA (&a8),Y
     JSR osasci
     CMP #&0d
-    BNE L916B
+    BNE alias_list_value
     INY
     TYA
     CLC
@@ -2057,16 +2057,16 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L9149
-.L9185
+    JMP alias_list_check
+.alias_list_done
     RTS
-.L9186
+.alias_clear_entry
     LDA #&ff
     EQUB &92, &A8  \ STA (0xa8)
     LDA alias_semicolon_flag
-    BEQ L9190
+    BEQ alias_syntax_error
     RTS
-.L9190
+.alias_syntax_error
     JSR copy_inline_to_stack    \ BRK error: "Syntax : ALIAS <alias name> <alias>"
     EQUS &48, "Syntax : ALIAS <alias name> <alias>", 0
 .check_alias
@@ -2074,19 +2074,19 @@ GUARD &C000
     STA &a8
     LDA #&b1
     STA &a9
-.L91C0
+.alias_walk_check
     EQUB &B2, &A8  \ LDA (0xa8)
     CMP #&ff
-    BEQ L91E6
+    BEQ alias_cmd_done
     PHY
     JSR compare_string
-    BCS L91EA
+    BCS alias_exec_entry
     LDY #&ff
-.L91CE
+.alias_walk_name
     INY
     LDA (&a8),Y
     CMP #&0d
-    BNE L91CE
+    BNE alias_walk_name
     INY
     CLC
     TYA
@@ -2096,26 +2096,26 @@ GUARD &C000
     ADC #&00
     STA &a9
     PLY
-    JMP L91C0
-.L91E6
+    JMP alias_walk_check
+.alias_cmd_done
     PLY
     PLX
     PLA
     RTS
-.L91EA
+.alias_exec_entry
     PLY
-    JSR L901F
+    JSR parse_cmdline
     LDY #&ff
-.L91F0
+.alias_exec_name
     INY
     LDA (&a8),Y
     CMP #&00
-    BNE L91F0
+    BNE alias_exec_name
     INY
     INY
     STY &93a7
     LDX #&00
-.L91FE
+.alias_exec_expand
     LDY &93a7
     LDA (&a8),Y
     INY
@@ -2123,60 +2123,60 @@ GUARD &C000
     STA &a55b,X
     INX
     CMP #&0d
-    BNE L9212
-    JMP L9262
-.L9212
+    BNE alias_check_percent
+    JMP alisv_open
+.alias_check_percent
     CMP #&25
-    BEQ L9219
-    JMP L91FE
-.L9219
+    BEQ alias_copy_literal
+    JMP alias_exec_expand
+.alias_copy_literal
     LDA (&a8),Y
     INY
     STY &93a7
     CMP #&25
-    BEQ L91FE
+    BEQ alias_exec_expand
     DEX
     CMP #&55
-    BNE L922B
-    JMP L9278
-.L922B
+    BNE alias_get_param_num
+    JMP alisv_write_header
+.alias_get_param_num
     SEC
     SBC #&30
     PHX
     TAX
     LDY &8a67
     CMP #&00
-    BEQ L9247
+    BEQ alias_copy_param
     DEY
-.L9238
+.alias_find_param
     INY
     LDA (&f2),Y
     CMP #&0d
-    BEQ L925E
+    BEQ alias_skip_rest
     CMP #&20
-    BNE L9238
+    BNE alias_find_param
     DEX
-    BNE L9238
+    BNE alias_find_param
     INY
-.L9247
+.alias_copy_param
     PLX
-.L9248
+.alias_copy_param_loop
     LDA (&f2),Y
     CMP #&20
-    BEQ L925B
+    BEQ alias_next_expand
     CMP #&0d
-    BEQ L925B
-    BEQ L925B
+    BEQ alias_next_expand
+    BEQ alias_next_expand
     STA &a55b,X
     INX
     INY
-    BNE L9248
-.L925B
-    JMP L91FE
-.L925E
+    BNE alias_copy_param_loop
+.alias_next_expand
+    JMP alias_exec_expand
+.alias_skip_rest
     PLX
-    JMP L91FE
-.L9262
+    JMP alias_exec_expand
+.alisv_open
     LDX #&56
     LDY #&a5
     JSR oscli
@@ -2189,14 +2189,14 @@ GUARD &C000
     PLA
     LDA #&00
     RTS
-.L9278
+.alisv_write_header
     LDA #&0b
     JSR osasci
     LDA #&15
     JSR osasci
-    JMP L91FE
+    JMP alias_exec_expand
 .cmd_alild
-    JSR L901F
+    JSR parse_cmdline
     CLC
     TYA
     ADC &f2
@@ -2207,16 +2207,16 @@ GUARD &C000
     LDA #&40
     JSR osfind
     CMP #&00
-    BEQ L92C8
+    BEQ alild_not_found
     STA &93a7
     LDA #&65
     STA &a8
     LDA #&b1
     STA &a9
-.L92A6
+.alild_read_loop
     LDY &93a7
     JSR osbget
-    BCS L92C0
+    BCS alild_close
     EQUB &92, &A8  \ STA (0xa8)
     CLC
     LDA &a8
@@ -2225,16 +2225,16 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L92A6
-.L92C0
+    JMP alild_read_loop
+.alild_close
     LDA #&00
     LDY &93a7
     JMP osfind
-.L92C8
+.alild_not_found
     JSR copy_inline_to_stack    \ BRK error: "Alias file not found"
     EQUS &D6, "Alias file not found", 0
 .cmd_alisv
-    JSR L901F
+    JSR parse_cmdline
     CLC
     TYA
     ADC &f2
@@ -2245,18 +2245,18 @@ GUARD &C000
     LDA #&80
     JSR osfind
     CMP #&00
-    BEQ L9326
+    BEQ alild_cant_open
     STA &93a7
     LDA #&65
     STA &a8
     LDA #&b1
     STA &a9
-.L9302
+.alild_check_end
     LDY &93a7
     EQUB &B2, &A8  \ LDA (0xa8)
     JSR osbput
     CMP #&ff
-    BEQ L931E
+    BEQ alild_open_error
     CLC
     LDA &a8
     ADC #&01
@@ -2264,12 +2264,12 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L9302
-.L931E
+    JMP alild_check_end
+.alild_open_error
     LDA #&00
     LDY &93a7
     JMP osfind
-.L9326
+.alild_cant_open
     JSR copy_inline_to_stack    \ BRK error: "Can't open alias file"
     EQUS &63, "Can't open alias file", 0
 .cmd_aliclr
@@ -2281,7 +2281,7 @@ GUARD &C000
     ORA #&80
     STA &fe30
     LDX #&00
-.L9350
+.store_copy_rom
     LDA &8000,X
     STA &a655,X
     LDA &8100,X
@@ -2291,21 +2291,21 @@ GUARD &C000
     LDA &8300,X
     STA &a955,X
     INX
-    BNE L9350
+    BNE store_copy_rom
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     AND #&7f
     STA &fe30
     LDA #&ff
     STA &93a6
     RTS
-.L9379
+.alias_init
     LDA &93a6
-    BEQ L93A5
+    BEQ alias_init_rts
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     ORA #&80
     STA &fe30
     LDX #&00
-.L9388
+.store_restore_rom
     LDA &a655,X
     STA &8000,X
     LDA &a755,X
@@ -2313,47 +2313,47 @@ GUARD &C000
     LDA &a855,X
     STA &8200,X
     INX
-    BNE L9388
+    BNE store_restore_rom
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     AND #&7f
     STA &fe30
-.L93A5
+.alias_init_rts
     RTS
     EQUB &FF, &24  \ &93A6: .$
-.L93A8
+.parse_hex_digit
     CMP #&30
-    BCC L93C0
+    BCC parse_hex_bad
     CMP #&47
-    BCS L93C0
+    BCS parse_hex_bad
     SEC
     SBC #&30
     CMP #&0a
-    BCC L93BE
+    BCC parse_hex_ok
     CMP #&11
-    BCC L93C0
+    BCC parse_hex_bad
     SEC
     SBC #&07
-.L93BE
+.parse_hex_ok
     CLC
     RTS
-.L93C0
+.parse_hex_bad
     SEC
     RTS
-.L93C2
+.parse_hex_word
     LDA #&00
     STA &ae
     STA &af
-.L93C8
+.parse_hex_loop
     LDA (&f2),Y
     CMP #&0d
-    BEQ L940B
+    BEQ mem_rts
     CMP #&20
-    BEQ L940B
-    JSR L93A8
-    BCC L93ED
+    BEQ mem_rts
+    JSR parse_hex_digit
+    BCC parse_hex_shift
     JSR copy_inline_to_stack    \ BRK error: "Invalid hex digit"
     EQUS &EB, "Invalid hex digit", 0
-.L93ED
+.parse_hex_shift
     ASL &ae
     ROL &af
     ASL &ae
@@ -2369,19 +2369,19 @@ GUARD &C000
     ADC #&00
     STA &af
     INY
-    BNE L93C8
-.L940B
+    BNE parse_hex_loop
+.mem_rts
     RTS
 .cmd_mem
-    JSR L901F
+    JSR parse_cmdline
     CMP #&0d
-    BEQ L9420
-    JSR L93C2
+    BEQ mem_setup_display
+    JSR parse_hex_word
     LDA &ae
     STA &9c68
     LDA &af
     STA &9c69
-.L9420
+.mem_setup_display
     LDA &9c68
     STA &a8
     LDA &9c69
@@ -2400,11 +2400,11 @@ GUARD &C000
     LDA #&20
     STA &fe01
     LDX #&27
-.L944B
+.mem_copy_header
     LDA &9c7e,X
     STA &7c00,X
     DEX
-    BPL L944B
+    BPL mem_copy_header
     LDA &027d
     STA &9c6c
     LDA #&01
@@ -2418,7 +2418,7 @@ GUARD &C000
     LDA #&7c
     STA &ad
     LDX #&16
-.L9474
+.mem_draw_row
     LDA #&83
     LDY #&00
     STA (&ac),Y
@@ -2432,12 +2432,12 @@ GUARD &C000
     LDA &ac
     ADC #&28
     STA &ac
-    BCC L9491
+    BCC mem_next_row
     INC &ad
-.L9491
+.mem_next_row
     DEX
-    BNE L9474
-.L9494
+    BNE mem_draw_row
+.mem_adjust_ptr
     SEC
     LDA &a8
     SBC #&50
@@ -2445,34 +2445,34 @@ GUARD &C000
     LDA &a9
     SBC #&00
     STA &af
-    JSR L95BC
+    JSR dis_setup
     LDA #&81
     LDX #&02
     LDY #&00
     JSR osbyte
     CPY #&1b
-    BEQ L9501
-    BCS L9494
+    BEQ mem_set_mode
+    BCS mem_adjust_ptr
     TXA
     LDX #&04
-.L94B6
+.mem_check_key
     CMP &9c6f,X
-    BEQ L94EC
+    BEQ mem_dispatch
     DEX
-    BPL L94B6
+    BPL mem_check_key
     PHA
     LDA &7c27
     CMP #&48
-    BEQ L94D2
+    BEQ mem_handle_hex
     PLA
     LDY &9c6e
     STA (&a8),Y
-    JSR L9543
-    JMP L9494
-.L94D2
+    JSR mem_cursor_down
+    JMP mem_adjust_ptr
+.mem_handle_hex
     PLA
-    JSR L93A8
-    BCS L9494
+    JSR parse_hex_digit
+    BCS mem_adjust_ptr
     STA &93a7
     LDY &9c6e
     LDA (&a8),Y
@@ -2482,8 +2482,8 @@ GUARD &C000
     ASL A
     ORA &93a7
     STA (&a8),Y
-    JMP L9494
-.L94EC
+    JMP mem_adjust_ptr
+.mem_dispatch
     TXA
     ASL A
     TAX
@@ -2492,8 +2492,8 @@ GUARD &C000
     LDA &9c75,X
     STA cmd_dispatch_addr + 2
     JSR cmd_dispatch
-    JMP L9494
-.L9501
+    JMP mem_adjust_ptr
+.mem_set_mode
     LDA &9c6c
     STA &027d
     LDA &9c6d
@@ -2511,7 +2511,7 @@ GUARD &C000
     LDA #&00
     STA &ff
     RTS
-.L952B
+.mem_cursor_up
     DEC mem_column
     EQUB &10, &12  \ BPL &9542
     LDA #&07
@@ -2523,14 +2523,14 @@ GUARD &C000
     LDA &A9
     SBC #&00
     STA &A9
-.L9542
+.mem_cursor_rts
     RTS
-.L9543
+.mem_cursor_down
     LDA &9c6e
     INC A
     STA &9c6e
     CMP #&08
-    BNE L9542
+    BNE mem_cursor_rts
     LDA #&00
     STA &9c6e
     CLC
@@ -2541,13 +2541,13 @@ GUARD &C000
     ADC #&00
     STA &a9
     RTS
-.L9561
+.mem_page_up
     LDA #&81
     LDX #&ff
     LDY #&ff
     JSR osbyte
     CPX #&ff
-    BNE L957C
+    BNE mem_row_up
     SEC
     LDA &A8
     SBC #&b0
@@ -2556,7 +2556,7 @@ GUARD &C000
     SBC #&00
     STA &A9
     RTS
-.L957C
+.mem_row_up
     SEC
     LDA &A8
     SBC #&08
@@ -2565,13 +2565,13 @@ GUARD &C000
     SBC #&00
     STA &A9
     RTS
-.L958A
+.mem_page_down
     LDA #&81
     LDX #&ff
     LDY #&ff
     JSR osbyte
     CPX #&ff
-    BNE L95A5
+    BNE mem_row_down
     CLC
     LDA &A8
     ADC #&b0
@@ -2580,7 +2580,7 @@ GUARD &C000
     ADC #&00
     STA &A9
     RTS
-.L95A5
+.mem_row_down
     CLC
     LDA &A8
     ADC #&08
@@ -2589,85 +2589,85 @@ GUARD &C000
     ADC #&00
     STA &A9
     RTS
-.L95B3
+.mem_toggle_mode
     LDA &7C27
     EOR #&09
     STA &7C27
     RTS
-.L95BC
+.dis_setup
     LDA #&16
     STA dis_temp
     LDA #&51
     STA &ac
     LDA #&7c
     STA &ad
-.L95C9
+.dis_line_loop
     LDA &af
-    JSR L964A
+    JSR dis_print_hex_byte
     LDA &ae
-    JSR L964A
+    JSR dis_print_hex_byte
     CLC
     LDA &ac
     ADC #&02
     STA &ac
-    BCC L95DE
+    BCC dis_hex_dump
     INC &ad
-.L95DE
+.dis_hex_dump
     LDY #&00
-.L95E0
+.dis_hex_byte_loop
     LDA (&ae),Y
-    JSR L964A
+    JSR dis_print_hex_byte
     INC &ac
-    BNE L95EB
+    BNE dis_hex_next
     INC &ad
-.L95EB
+.dis_hex_next
     INY
     CPY #&08
-    BNE L95E0
+    BNE dis_hex_byte_loop
     CLC
     LDA &ac
     ADC #&01
     STA &ac
-    BCC L95FB
+    BCC dis_ascii_dump
     INC &ad
-.L95FB
+.dis_ascii_dump
     LDY #&00
-.L95FD
+.dis_ascii_loop
     LDA (&ae),Y
     AND #&7f
     CMP #&20
-    BCS L9607
+    BCS dis_store_byte
     LDA #&2e
-.L9607
+.dis_store_byte
     STA (&ac),Y
     INY
     CPY #&08
-    BNE L95FD
+    BNE dis_ascii_loop
     CLC
     LDA &ac
     ADC #&09
     STA &ac
-    BCC L9619
+    BCC dis_advance_ptr
     INC &ad
-.L9619
+.dis_advance_ptr
     CLC
     LDA &ae
     ADC #&08
     STA &ae
-    BCC L9624
+    BCC dis_next_line
     INC &af
-.L9624
+.dis_next_line
     DEC dis_temp
-    BNE L95C9
+    BNE dis_line_loop
     LDY #&00
     TYA
-.L962C
+.dis_bracket_loop
     STA &7de6,Y
     INY
     INY
     INY
     CPY #&1b
-    BNE L962C
+    BNE dis_bracket_loop
     LDA &9c6e
     ASL A
     ADC &9c6e
@@ -2679,7 +2679,7 @@ GUARD &C000
     RTS
 .dis_temp
     EQUB &00  \ &9649: .
-.L964A
+.dis_print_hex_byte
     STA &965e
     LSR A
     LSR A
@@ -2689,20 +2689,20 @@ GUARD &C000
     LDA &9ca6,X
     EQUB &92, &AC  \ STA (0xac)
     INC &ac
-    BNE L965D
+    BNE dis_print_lo_nibble
     INC &ad
-.L965D
+.dis_print_lo_nibble
     LDA #&88
     AND #&0f
     TAX
     LDA &9ca6,X
     EQUB &92, &AC  \ STA (0xac)
     INC &ac
-    BNE L966D
+    BNE dis_hex_byte_rts
     INC &ad
-.L966D
+.dis_hex_byte_rts
     RTS
-.L966E
+.dis_print_hex_word
     STA &967d
     LSR A
     LSR A
@@ -2758,24 +2758,24 @@ GUARD &C000
 .dis_operand_sizes
     EQUB 1, 2, 3, 2, 1, 1, 2, 2, 2, 2, 3, 3, 2, 3, 3, 2
 .cmd_dis
-    JSR L901F
+    JSR parse_cmdline
     CMP #&0d
-    BEQ L9711
-    JSR L93C2
-    BRA L971B
-.L9711
+    BEQ dis_display_line
+    JSR parse_hex_word
+    BRA dis_print_header
+.dis_display_line
     LDA &9c6a
     STA &ae
     LDA &9c6b
     STA &af
-.L971B
+.dis_print_header
     LDA #&82
     JSR oswrch
     JSR oswrch
     LDA &af
-    JSR L966E
+    JSR dis_print_hex_word
     LDA &ae
-    JSR L966E
+    JSR dis_print_hex_word
     LDA #&20
     JSR oswrch
     LDY #&00
@@ -2793,19 +2793,19 @@ GUARD &C000
     STA &ad
     LDY #&03
     LDA (&ac),Y
-    BEQ L9765
+    BEQ dis_get_mode
     LDA #&83
     JSR oswrch
     LDY #&00
-.L9756
+.dis_print_opcode
     LDA (&ac),Y
     JSR oswrch
     INY
     CPY #&03
-    BNE L9756
+    BNE dis_print_opcode
     LDA #&20
     JSR oswrch
-.L9765
+.dis_get_mode
     LDY #&03
     LDA (&ac),Y
     PHA
@@ -2816,81 +2816,81 @@ GUARD &C000
     LDA &96d6,X
     STA &ad
     LDY #&ff
-.L9778
+.dis_format_loop
     INY
     LDA (&ac),Y
-    BEQ L9797
+    BEQ dis_print_addr
     CMP #&68
-    BNE L9784
-    JMP L9806
-.L9784
+    BNE dis_check_lo
+    JMP dis_check_up
+.dis_check_lo
     CMP #&6c
-    BNE L978B
-    JMP L9812
-.L978B
+    BNE dis_check_branch
+    JMP dis_check_down
+.dis_check_branch
     CMP #&62
-    BNE L9792
-    JMP L981E
-.L9792
+    BNE dis_print_char
+    JMP dis_check_right
+.dis_print_char
     JSR oswrch
-    BRA L9778
-.L9797
+    BRA dis_format_loop
+.dis_print_addr
     LDA #&86
     JSR oswrch
     LDA &0318
     CMP #&16
-    BNE L9797
+    BNE dis_print_addr
     PLX
     LDA &96f5,X
     PHA
     TAX
     LDY #&00
-.L97AB
+.dis_print_byte
     LDA (&ae),Y
     PHX
-    JSR L966E
+    JSR dis_print_hex_word
     PLX
     LDA #&20
     JSR oswrch
     INY
     DEX
-    BNE L97AB
-.L97BB
+    BNE dis_print_byte
+.dis_print_ascii
     LDA #&85
     JSR oswrch
     LDA &0318
     CMP #&21
-    BNE L97BB
+    BNE dis_print_ascii
     PLX
     PHX
     LDY #&00
-.L97CB
+.dis_ascii_char
     LDA (&ae),Y
     AND #&7f
     CMP #&20
-    BCS L97D5
+    BCS dis_check_del
     LDA #&2e
-.L97D5
+.dis_check_del
     CMP #&7f
-    BNE L97DB
+    BNE dis_output_char
     LDA #&ff
-.L97DB
+.dis_output_char
     JSR oswrch
     INY
     DEX
-    BNE L97CB
+    BNE dis_ascii_char
     JSR osnewl
     PLA
     CLC
     ADC &ae
     STA &ae
-    BCC L97EF
+    BCC dis_wait_key
     INC &af
-.L97EF
+.dis_wait_key
     JSR osrdch
-    BCS L97F7
-    JMP L971B
-.L97F7
+    BCS dis_save_state
+    JMP dis_print_header
+.dis_save_state
     LDA &ae
     STA &9c6a
     LDA &af
@@ -2898,21 +2898,21 @@ GUARD &C000
     LDA #&00
     STA &ff
     RTS
-.L9806
+.dis_check_up
     PHY
     LDY #&02
     LDA (&ae),Y
-    JSR L966E
+    JSR dis_print_hex_word
     PLY
-    JMP L9778
-.L9812
+    JMP dis_format_loop
+.dis_check_down
     PHY
     LDY #&01
     LDA (&ae),Y
-    JSR L966E
+    JSR dis_print_hex_word
     PLY
-    JMP L9778
-.L981E
+    JMP dis_format_loop
+.dis_check_right
     PHY
     LDY #&01
     CLC
@@ -2923,31 +2923,31 @@ GUARD &C000
     ADC #&00
     STA &a9
     LDA (&ae),Y
-    BMI L9849
+    BMI dis_advance
     CLC
     ADC &a8
     STA &a8
     LDA &a9
     ADC #&00
     STA &a9
-    JSR L966E
+    JSR dis_print_hex_word
     LDA &a8
-    JSR L966E
+    JSR dis_print_hex_word
     PLY
-    JMP L9778
-.L9849
+    JMP dis_format_loop
+.dis_advance
     CLC
     ADC &a8
     STA &a8
     LDA &a9
     ADC #&ff
     STA &a9
-    JSR L966E
+    JSR dis_print_hex_word
     LDA &a8
-    JSR L966E
+    JSR dis_print_hex_word
     PLY
-    JMP L9778
-.L9860
+    JMP dis_format_loop
+.print_backspace
     LDA #&08
     JSR oswrch
     JSR oswrch
@@ -2956,17 +2956,17 @@ GUARD &C000
     JSR oswrch
     LDY #&01
     LDA (&a8),Y
-    BMI L9888
+    BMI bau_space_rts
     STA &9eed
     LDY #&02
     LDA (&a8),Y
     STA &9eec
     PHX
     PHY
-    JSR L9EAF
+    JSR print_decimal
     PLY
     PLX
-.L9888
+.bau_space_rts
     RTS
 .msg_now_splitting
     EQUS 13, "Now splitting line:      " : EQUB 0
@@ -2975,87 +2975,87 @@ GUARD &C000
 .cmd_bau
     LDA &0230
     CMP #&0c
-    BEQ L98EA
+    BEQ bau_splitting
     JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
     EQUS &5C, "BAU must be called from BASIC", 0
-.L98EA
+.bau_splitting
     STROUT msg_now_splitting
     LDA &18
     STA &a9
     LDA #&00
     STA &a8
-.L98FF
-    JSR L9860
-.L9902
+.bau_line_loop
+    JSR print_backspace
+.bau_check_line
     LDY #&01
     LDA (&a8),Y
     CMP #&ff
-    BNE L990D
-    JMP L9A08
-.L990D
+    BNE bau_get_length
+    JMP space_start
+.bau_get_length
     LDY #&04
     LDA (&a8),Y
     STA &0900
     DEY
     CMP #&2e
-    BNE L9936
-.L9919
+    BNE bau_skip_token
+.bau_scan_loop
     INY
     LDA (&a8),Y
     CMP #&0d
-    BNE L9923
-    JMP L99F6
-.L9923
+    BNE bau_check_colon
+    JMP bau_next_line
+.bau_check_colon
     CMP #&3a
-    BEQ L9933
+    BEQ bau_split_here
     CMP #&20
-    BNE L9919
-.L992B
+    BNE bau_scan_loop
+.bau_scan_char
     INY
     LDA (&a8),Y
     CMP #&20
-    BEQ L992B
+    BEQ bau_scan_char
     DEY
-.L9933
-    JMP L9972
-.L9936
+.bau_split_here
+    JMP bau_check_end
+.bau_skip_token
     INY
     LDA (&a8),Y
     CMP #&3a
-    BEQ L9972
+    BEQ bau_check_end
     CMP #&0d
-    BNE L9944
-    JMP L99F6
-.L9944
+    BNE bau_check_then
+    JMP bau_next_line
+.bau_check_then
     CMP #&e7
-    BNE L994B
-    JMP L99F6
-.L994B
+    BNE bau_check_data
+    JMP bau_next_line
+.bau_check_data
     CMP #&dc
-    BNE L9952
-    JMP L99F6
-.L9952
+    BNE bau_check_else
+    JMP bau_next_line
+.bau_check_else
     CMP #&ee
-    BNE L9959
-    JMP L99F6
-.L9959
+    BNE bau_check_rem
+    JMP bau_next_line
+.bau_check_rem
     CMP #&f4
-    BNE L9960
-    JMP L99F6
-.L9960
+    BNE bau_check_quote
+    JMP bau_next_line
+.bau_check_quote
     CMP #&22
-    BNE L9936
-.L9964
+    BNE bau_skip_token
+.bau_skip_string
     INY
     LDA (&a8),Y
     CMP #&22
-    BEQ L9936
+    BEQ bau_skip_token
     CMP #&0d
-    BNE L9964
-    JMP L99F6
-.L9972
+    BNE bau_skip_string
+    JMP bau_next_line
+.bau_check_end
     CPY #&04
-    BEQ L9936
+    BEQ bau_skip_token
     LDA #&0d
     STA (&a8),Y
     TYA
@@ -3089,7 +3089,7 @@ GUARD &C000
     LDA &01
     SBC #&00
     STA &ab
-.L99B0
+.bau_copy_byte
     EQUB &B2, &AA  \ LDA (0xaa)
     EQUB &92, &AC  \ STA (0xac)
     SEC
@@ -3107,10 +3107,10 @@ GUARD &C000
     SBC #&00
     STA &ab
     CMP &a9
-    BNE L99B0
+    BNE bau_copy_byte
     LDA &aa
     CMP &a8
-    BNE L99B0
+    BNE bau_copy_byte
     LDA #&00
     LDY #&01
     STA (&a8),Y
@@ -3126,8 +3126,8 @@ GUARD &C000
     LDA &01
     ADC #&00
     STA &01
-    JMP L9902
-.L99F6
+    JMP bau_check_line
+.bau_next_line
     LDY #&03
     LDA (&a8),Y
     CLC
@@ -3136,8 +3136,8 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L98FF
-.L9A08
+    JMP bau_line_loop
+.space_start
     JSR osnewl
     LDA #&15
     JSR oswrch
@@ -3154,123 +3154,123 @@ GUARD &C000
 .cmd_space
     LDA &0230
     CMP #&0c
-    BEQ L9A55
+    BEQ space_setup
     JSR copy_inline_to_stack    \ BRK error: "Must be called from BASIC!"
     EQUS &5C, "Must be called from BASIC!", 0
-.L9A55
+.space_setup
     LDA &18
     STA &a9
     STZ &a8
     STROUT msg_now_spacing
-.L9A68
-    JSR L9860
+.space_line_loop
+    JSR print_backspace
     LDY #&01
     LDA (&a8),Y
     CMP #&ff
-    BNE L9A76
-    JMP L9B7A
-.L9A76
+    BNE space_scan_start
+    JMP space_save_top
+.space_scan_start
     LDY #&03
-.L9A78
+.space_scan_loop
     INY
     LDA (&a8),Y
-    BMI L9A9D
+    BMI space_check_token
     CMP #&0d
-    BNE L9A84
-    JMP L9B68
-.L9A84
+    BNE space_check_bracket
+    JMP space_next_line
+.space_check_bracket
     CMP #&5b
-    BNE L9A8B
-    JMP L9CB6
-.L9A8B
+    BNE space_check_quote
+    JMP lvar_display_value
+.space_check_quote
     CMP #&22
-    BNE L9A78
-.L9A8F
+    BNE space_scan_loop
+.space_skip_string
     INY
     LDA (&a8),Y
     CMP #&22
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&0d
-    BNE L9A8F
-    JMP L9B68
-.L9A9D
+    BNE space_skip_string
+    JMP space_next_line
+.space_check_token
     CMP #&8d
-    BNE L9AA6
+    BNE space_check_else
     INY
     INY
     INY
-    BNE L9A78
-.L9AA6
+    BNE space_scan_loop
+.space_check_else
     CMP #&a7
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&c0
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&c1
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&b0
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&c2
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&c4
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&8a
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&f2
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&a4
-    BEQ L9A78
+    BEQ space_scan_loop
     CMP #&cf
-    BCC L9AD5
+    BCC space_check_range
     CMP #&d4
-    BCS L9AD5
-    JMP L9A78
-.L9AD5
+    BCS space_check_range
+    JMP space_scan_loop
+.space_check_range
     CMP #&8f
-    BCC L9AE0
+    BCC space_check_next
     CMP #&94
-    BCS L9AE0
-    JMP L9A78
-.L9AE0
+    BCS space_check_next
+    JMP space_scan_loop
+.space_check_next
     CMP #&b8
-    BNE L9AEE
+    BNE space_check_lomem
     INY
     LDA (&a8),Y
     CMP #&50
-    BEQ L9A78
+    BEQ space_scan_loop
     DEY
     LDA #&b8
-.L9AEE
+.space_check_lomem
     CMP #&b3
-    BNE L9AFF
+    BNE space_check_rem
     INY
     LDA (&a8),Y
     CMP #&28
-    BNE L9AFC
-    JMP L9A78
-.L9AFC
+    BNE space_insert_lomem
+    JMP space_scan_loop
+.space_insert_lomem
     DEY
     LDA #&b3
-.L9AFF
+.space_check_rem
     CMP #&f4
-    BNE L9B06
-    JMP L9B68
-.L9B06
+    BNE space_insert_space
+    JMP space_next_line
+.space_insert_space
     INY
     LDA (&a8),Y
     DEY
     CMP #&20
-    BNE L9B11
-    JMP L9A78
-.L9B11
+    BNE space_check_cr
+    JMP space_scan_loop
+.space_check_cr
     CMP #&0d
-    BNE L9B18
-    JMP L9A78
-.L9B18
+    BNE space_check_colon
+    JMP space_scan_loop
+.space_check_colon
     CMP #&3a
-    BNE L9B1F
-    JMP L9A78
-.L9B1F
-    JSR L9BAA
+    BNE space_do_insert
+    JMP space_scan_loop
+.space_do_insert
+    JSR space_shift_up
     PHY
     LDY #&03
     LDA (&a8),Y
@@ -3290,26 +3290,26 @@ GUARD &C000
     DEY
     LDA (&a8),Y
     CMP #&b8
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&80
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&81
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&8b
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&82
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&83
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&84
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&8c
-    BEQ L9B86
+    BEQ space_insert_byte
     CMP #&88
-    BEQ L9B86
+    BEQ space_insert_byte
     INY
-    JMP L9A78
-.L9B68
+    JMP space_scan_loop
+.space_next_line
     LDY #&03
     LDA (&a8),Y
     CLC
@@ -3318,17 +3318,17 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JMP L9A68
-.L9B7A
+    JMP space_line_loop
+.space_save_top
     LDA &00
     STA &12
     LDA &01
     STA &13
     JSR osnewl
     RTS
-.L9B86
+.space_insert_byte
     DEY
-    JSR L9BAA
+    JSR space_shift_up
     PHY
     LDY #&03
     LDA (&a8),Y
@@ -3347,8 +3347,8 @@ GUARD &C000
     STA (&a8),Y
     INY
     INY
-    JMP L9A78
-.L9BAA
+    JMP space_scan_loop
+.space_shift_up
     LDA &a8
     PHA
     LDA &a9
@@ -3371,7 +3371,7 @@ GUARD &C000
     LDA &01
     SBC #&00
     STA &ab
-.L9BD1
+.space_copy_loop
     EQUB &B2, &AA  \ LDA (0xaa)
     EQUB &92, &AC  \ STA (0xac)
     SEC
@@ -3389,10 +3389,10 @@ GUARD &C000
     SBC #&00
     STA &ab
     CMP &a9
-    BNE L9BD1
+    BNE space_copy_loop
     LDA &aa
     CMP &a8
-    BNE L9BD1
+    BNE space_copy_loop
     PLA
     STA &a9
     PLA
@@ -3401,12 +3401,12 @@ GUARD &C000
 .cmd_lvar
     LDA &0230
     CMP #&0c
-    BEQ L9C23
+    BEQ lvar_start
     JSR copy_inline_to_stack    \ BRK error: "VAR works only in BASIC"
     EQUS &4C, "VAR works only in BASIC", 0
-.L9C23
+.lvar_start
     LDX #&00
-.L9C25
+.lvar_var_loop
     LDA &0480,X
     STA &a8
     INX
@@ -3414,37 +3414,37 @@ GUARD &C000
     DEX
     STA &a9
     CMP #&00
-    BEQ L9C5F
-.L9C35
+    BEQ lvar_next_var
+.lvar_check_type
     TXA
     LSR A
     CLC
     ADC #&40
     JSR oswrch
     LDY #&01
-.L9C3F
+.lvar_skip_name
     INY
     LDA (&a8),Y
-    BEQ L9C49
+    BEQ lvar_print_newline
     JSR oswrch
-    BRA L9C3F
-.L9C49
+    BRA lvar_skip_name
+.lvar_print_newline
     JSR osnewl
     LDY #&01
     LDA (&a8),Y
-    BEQ L9C5F
+    BEQ lvar_next_var
     STA &ac
     DEY
     LDA (&a8),Y
     STA &a8
     LDA &ac
     STA &a9
-    BRA L9C35
-.L9C5F
+    BRA lvar_check_type
+.lvar_next_var
     INX
     INX
     CPX #&80
-    BNE L9C25
+    BNE lvar_var_loop
     RTS
 \ --- MEM editor configuration data ---
 .mem_workspace
@@ -3455,11 +3455,11 @@ GUARD &C000
     EQUB &02                   \ MEM column counter (0-7)
     EQUB &88, &89, &8A, &8B   \ Key codes: left, right, down, up
     EQUB &09                   \ TAB key
-    EQUW L952B                 \ Address of cursor-up routine
-    EQUW L9543                 \ Address of cursor-down routine
-    EQUW L958A                 \ Address of page-down routine
-    EQUW L9561                 \ Address of page-up routine
-    EQUW L95B3                 \ Address of hex/ascii toggle
+    EQUW mem_cursor_up                 \ Address of cursor-up routine
+    EQUW mem_cursor_down                 \ Address of cursor-down routine
+    EQUW mem_page_down                 \ Address of page-down routine
+    EQUW mem_page_up                 \ Address of page-up routine
+    EQUW mem_toggle_mode                 \ Address of hex/ascii toggle
 \ --- MEM editor header display (uses VDU control codes) ---
 .mem_header
     EQUB &82 : EQUS "ADDR " : EQUB &94
@@ -3470,87 +3470,87 @@ GUARD &C000
 \ --- Hex digit lookup table ---
 .hex_digits
     EQUS "A0123456789ABCDEF"
-.L9CB6
+.lvar_display_value
     INY
-.L9CB7
+.lvar_parse_token
     LDA #&00
     STA &a154
     LDA (&a8),Y
     CMP #&0d
-    BNE L9CC5
-    JMP L9D63
-.L9CC5
+    BNE lvar_check_dot
+    JMP lvar_end_of_line
+.lvar_check_dot
     CMP #&2e
-    BNE L9CDE
-.L9CC9
+    BNE lvar_check_string
+.lvar_scan_name
     INY
     LDA (&a8),Y
     CMP #&0d
-    BNE L9CD3
-    JMP L9D63
-.L9CD3
+    BNE lvar_check_space
+    JMP lvar_end_of_line
+.lvar_check_space
     CMP #&20
-    BEQ L9CDB
+    BEQ lvar_next_token
     CMP #&3a
-    BNE L9CC9
-.L9CDB
+    BNE lvar_scan_name
+.lvar_next_token
     INY
-    BRA L9CB7
-.L9CDE
+    BRA lvar_parse_token
+.lvar_check_string
     CMP #&22
-    BNE L9CF0
-.L9CE2
+    BNE lvar_lookup_token
+.lvar_string_loop
     INY
     LDA (&a8),Y
     CMP #&0d
-    BEQ L9D63
+    BEQ lvar_end_of_line
     CMP #&22
-    BNE L9CE2
+    BNE lvar_string_loop
     INY
-    BRA L9CB7
-.L9CF0
-    JSR L9E7F
-    BCS L9D1D
+    BRA lvar_parse_token
+.lvar_lookup_token
+    JSR token_classify
+    BCS lvar_print_token
     CMP #&3a
-    BNE L9CFC
+    BNE lvar_check_close
     INY
-    BRA L9CB7
-.L9CFC
+    BRA lvar_parse_token
+.lvar_check_close
     CMP #&5d
-    BNE L9D03
-    JMP L9D85
-.L9D03
+    BNE lvar_check_backslash
+    JMP lvar_done
+.lvar_check_backslash
     CMP #&5c
-    BNE L9D18
-.L9D07
+    BNE lvar_set_indent
+.lvar_skip_backslash
     INY
     LDA (&a8),Y
     CMP #&3a
-    BEQ L9D15
+    BEQ lvar_skip_and_continue
     CMP #&0d
-    BNE L9D07
-    JMP L9D63
-.L9D15
+    BNE lvar_skip_backslash
+    JMP lvar_end_of_line
+.lvar_skip_and_continue
     INY
-    BRA L9CB7
-.L9D18
+    BRA lvar_parse_token
+.lvar_set_indent
     LDA #&03
     STA &a154
-.L9D1D
+.lvar_print_token
     INY
     LDA (&a8),Y
     CMP #&5d
-    BEQ L9D85
+    BEQ lvar_done
     CMP #&0d
-    BEQ L9D63
+    BEQ lvar_end_of_line
     DEC &a154
-    BNE L9D1D
+    BNE lvar_print_token
     CMP #&3a
-    BEQ L9CB7
+    BEQ lvar_parse_token
     CMP #&20
-    BEQ L9D54
+    BEQ lvar_print_char
     DEY
-    JSR L9BAA
+    JSR space_shift_up
     PHY
     LDY #&03
     LDA (&a8),Y
@@ -3567,16 +3567,16 @@ GUARD &C000
     LDA #&20
     INY
     STA (&a8),Y
-.L9D54
+.lvar_print_char
     INY
     LDA (&a8),Y
     CMP #&0d
-    BEQ L9D63
+    BEQ lvar_end_of_line
     CMP #&3a
-    BNE L9D54
+    BNE lvar_print_char
     INY
-    JMP L9CB7
-.L9D63
+    JMP lvar_parse_token
+.lvar_end_of_line
     LDY #&03
     CLC
     LDA (&a8),Y
@@ -3585,28 +3585,28 @@ GUARD &C000
     LDA &a9
     ADC #&00
     STA &a9
-    JSR L9860
+    JSR print_backspace
     LDY #&01
     LDA (&a8),Y
     CMP #&ff
-    BNE L9D80
-    JMP L9B7A
-.L9D80
+    BNE lvar_continuation
+    JMP space_save_top
+.lvar_continuation
     LDY #&04
-    JMP L9CB7
-.L9D85
-    JMP L9A78
-.L9D88
+    JMP lvar_parse_token
+.lvar_done
+    JMP space_scan_loop
+.xi_support_entry
     LDA #&54
     STA &AC
     LDA #&ae
     STA &AD
     INC xi_alias_count
     LDA xi_alias_count
-    BNE L9D9D
+    BNE xi_supp_inc_cursor
     LDA #&ff
     STA xi_alias_count
-.L9D9D
+.xi_supp_inc_cursor
     INC xi_cursor_pos
     SEC
     LDA &AC
@@ -3620,7 +3620,7 @@ GUARD &C000
     STA alias_end_lo
     LDA #&ff
     STA alias_end_hi
-.L9DBB
+.xi_supp_copy_loop
     EQUB &B2, &AE  \ LDA (&ae)
     EQUB &92, &AC  \ STA (&ac)
     SEC
@@ -3639,78 +3639,78 @@ GUARD &C000
     STA &AF
     LDA &AE
     CMP #&54
-    BNE L9DBB
+    BNE xi_supp_copy_loop
     LDA &AF
     CMP #&aa
-    BNE L9DBB
+    BNE xi_supp_copy_loop
     LDY xi_cursor_pos
-    BEQ L9DF7
+    BEQ xi_supp_save_cr
     LDY #&00
-.L9DEC
+.xi_supp_save_loop
     LDA (&a8),Y
     STA &aa55,Y
     INY
     CPY xi_cursor_pos
-    BNE L9DEC
-.L9DF7
+    BNE xi_supp_save_loop
+.xi_supp_save_cr
     LDA #&0d
     STA alias_buffer,Y
     RTS
 .xi_scroll_count
     EQUB &A6                   \ &9DFD: scroll counter variable
-.L9DFE
+.xi_supp_restore
     LDA #&0D
     STA alias_end_hi
     LDA xi_scroll_count
     CMP #&FF
-    BNE L9E0F
+    BNE xi_supp_check_count
     LDA #&00
     STA xi_scroll_count
-.L9E0F
+.xi_supp_check_count
     CMP xi_alias_count
-    BCC L9E1B
+    BCC xi_supp_set_ptr
     LDA xi_alias_count
     DEC A
     STA xi_scroll_count
-.L9E1B
+.xi_supp_set_ptr
     LDA #&55
     STA &AE
     LDA #&aa
     STA &AF
     LDX xi_scroll_count
-    BNE L9E4A
-.L9E28
+    BNE xi_supp_check_end
+.xi_supp_clear_and_load
     JSR xi_do_clear
     EQUB &B2, &AE  \ LDA (&ae)
     CMP #&0d
-    BNE L9E34
+    BNE xi_supp_find_cr
     JMP xi_read_loop
-.L9E34
+.xi_supp_find_cr
     LDY #&ff
-.L9E36
+.xi_supp_find_loop
     INY
     LDA (&ae),Y
     STA xi_char
     CMP #&0d
-    BNE L9E43
+    BNE xi_supp_insert_char
     JMP xi_read_loop
-.L9E43
+.xi_supp_insert_char
     PHY
     JSR xi_do_insert
     PLY
-    BRA L9E36
-.L9E4A
+    BRA xi_supp_find_loop
+.xi_supp_check_end
     LDY #&00
-.L9E4C
+.xi_supp_check_loop
     LDA (&ae),Y
     CMP #&0d
-    BEQ L9E5D
+    BEQ xi_supp_advance
     INY
-    BNE L9E4C
+    BNE xi_supp_check_loop
     LDA #&00
     STA xi_scroll_count
-    JMP L9DFE
-.L9E5D
+    JMP xi_supp_restore
+.xi_supp_advance
     INY
     TYA
     CLC
@@ -3720,82 +3720,82 @@ GUARD &C000
     ADC #&00
     STA &AF
     DEX
-    BEQ L9E28
+    BEQ xi_supp_clear_and_load
     CMP #&ae
-    BCC L9E4A
+    BCC xi_supp_check_end
     LDA &AE
     CMP #&55
-    BCC L9E4A
+    BCC xi_supp_check_end
     LDA #&00
     STA xi_scroll_count
-    JMP L9DFE
-.L9E7F
+    JMP xi_supp_restore
+.token_classify
     CMP #&45
-    BNE L9E8A
+    BNE token_check_80
     LDA #&04
     STA &a154
-    BRA L9EAD
-.L9E8A
+    BRA token_found
+.token_check_80
     CMP #&80
-    BNE L9E95
+    BNE token_check_82
     LDA #&01
     STA &a154
-    BRA L9EAD
-.L9E95
+    BRA token_found
+.token_check_82
     CMP #&82
-    BNE L9EA0
+    BNE token_check_84
     LDA #&01
     STA &a154
-    BRA L9EAD
-.L9EA0
+    BRA token_found
+.token_check_84
     CMP #&84
-    BNE L9EAB
+    BNE token_not_found
     LDA #&02
     STA &a154
-    BRA L9EAD
-.L9EAB
+    BRA token_found
+.token_not_found
     CLC
     RTS
-.L9EAD
+.token_found
     SEC
     RTS
-.L9EAF
+.print_decimal
     LDY #&00
-.L9EB1
+.print_dec_loop
     LDX #&10
     LDA #&00
-.L9EB5
+.print_dec_shift
     ASL &9eec
     ROL &9eed
     ROL A
     CMP #&0a
-    BCC L9EC5
+    BCC print_dec_next_bit
     SBC #&0a
     INC &9eec
-.L9EC5
+.print_dec_next_bit
     DEX
-    BNE L9EB5
+    BNE print_dec_shift
     CLC
     ADC #&30
     PHA
     INY
     LDA &9eec
     ORA &9eed
-    BNE L9EB1
-.L9ED5
+    BNE print_dec_loop
+.print_dec_done
     CPY #&05
-    BEQ L9EDF
+    BEQ print_dec_output
     LDA #&20
     PHA
     INY
-    BNE L9ED5
-.L9EDF
+    BNE print_dec_done
+.print_dec_output
     STY &9eee
-.L9EE2
+.print_dec_digit
     PLA
     JSR oswrch
     DEC &9eee
-    BNE L9EE2
+    BNE print_dec_digit
     RTS
     EQUB &00, &00, &00, &00
 .features_text
