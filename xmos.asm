@@ -423,17 +423,17 @@ GUARD &C000
 .beep
     LDA #&07                   \ BEL character
     JMP oswrch
-\ --- Workspace variables (within ROM, self-modified) ---
+\ --- Workspace variables (in sideways RAM, overwritten at runtime) ---
 .xon_flag
     EQUB &FF                   \ non-zero = XON active
-.cursor_col
-    EQUB &1A                   \ cursor column (extended input state)
-.cursor_max_col
-    EQUB &1A                   \ max column
-.cursor_cr
-    EQUB &0D                   \ CR character
-.cursor_bs
-    EQUB &08                   \ backspace character
+.xi_cursor_pos
+    EQUB &1A                   \ current cursor position in input line
+.xi_line_len
+    EQUB &1A                   \ current line length
+.xi_char
+    EQUB &0D                   \ last character read / temp
+.xi_temp
+    EQUB &08                   \ temp for number parsing
 
 \ ============================================================================
 \ Post-reset handler (service call &27)
