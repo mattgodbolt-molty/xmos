@@ -134,6 +134,18 @@ Switched from automated disassembly to hand annotation. The disassembler (`disas
 - The `xon_flag` at &847F and other workspace variables are stored within the ROM itself (sideways RAM on the BBC Master), making the code position-dependent.
 - There's a `beep` routine hidden in what looked like workspace data: `LDA #7 : JMP oswrch`.
 
+### STROUT macro
+Introduced `STROUT addr` macro to replace the repeated "print null-terminated string at addr,X" pattern (LDX #0 / LDA addr,X / BEQ done / JSR osasci / INX / BNE loop). Found 9 instances, replaced 8 (one was interleaved with other logic). This is currently a macro generating identical bytes; in the improvements phase it could become a subroutine call to save ~8 bytes per call site.
+
+beebasm quirk: macro names starting with `PRINT` fail because the parser treats `PRINTX arg` as `PRINT X, arg`. Documented in the source — beebasm has hardcoded keyword prefixes. `STROUT` works fine.
+
+### Future subroutine candidates (for improvements phase)
+These patterns appear multiple times and could be refactored into subroutines:
+- **STROUT**: print null-terminated string at address (8 instances × ~11 bytes = ~88 bytes, could save ~70 bytes as a subroutine)
+- **print_inline**: already a subroutine, but only used once — more places could use it
+- **Hex digit parse**: appears in DIS, MEM, and alias commands
+- **OSBYTE 4 cursor key setup**: duplicated in cmd_xon, cmd_xoff, and handle_reset
+
 ### Current state (annotated)
 - Major structural elements annotated and readable
 - Large swathes of code remain as raw EQUB data (extended input handler, key redefinition, alias management, disassembler, memory editor, etc.)

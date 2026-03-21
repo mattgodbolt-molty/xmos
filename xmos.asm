@@ -7,6 +7,7 @@
 CPU 1  \ 65C02
 
 INCLUDE "constants.asm"
+INCLUDE "macros.asm"
 
 ORG &8000
 GUARD &C000
@@ -689,16 +690,7 @@ GUARD &C000
     LDX #LO(osfile_block)
     LDY #HI(osfile_block)
     JSR osfile
-{
-    LDX #&00                    \ Print "Program saved as '"
-.print_loop
-    LDA saved_msg,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE print_loop
-.done
-}
+    STROUT saved_msg
     PLA                         \ Restore BASIC string pointer
     STA &b3
     PLA
@@ -721,16 +713,7 @@ GUARD &C000
     BNE print_name
 .name_done
 }
-{
-    LDX #&00                    \ Print closing quote + newline
-.print_loop
-    LDA saved_msg_end,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE print_loop
-.done
-}
+    STROUT saved_msg_end         \ Print closing quote + newline
     RTS
 
 \ --- OSFILE parameter block (18 bytes, copied from template then modified) ---
@@ -851,14 +834,7 @@ GUARD &C000
     EQUB &00                   \ &8C73: non-zero = KEYON active
     EQUB &41, &02, &49, &69, &4A  \ &8C74: workspace
 .L8C79
-    LDX #&00
-.L8C7B
-    LDA msg_keyon_already,X
-    BEQ L8C86
-    JSR osasci
-    INX
-    BNE L8C7B
-.L8C86
+    STROUT msg_keyon_already
     JMP L8D64
 .L8C89
     LDA keyon_active
@@ -950,13 +926,7 @@ GUARD &C000
     RTS
 .cmd_keyon
     JSR L8C89
-    LDX #&00
-.L8D59
-    LDA msg_keys_redefined,X
-    BEQ L8D64
-    JSR osasci
-    INX
-    BNE L8D59
+    STROUT msg_keys_redefined
 .L8D64
     RTS
 .msg_keys_redefined
@@ -980,16 +950,7 @@ GUARD &C000
     LDA saved_keyv_hi
     STA &020B
 .keyoff_print_msg
-{
-    LDX #&00
-.loop
-    LDA msg_keys_off,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE loop
-.done
-}
+    STROUT msg_keys_off
     JMP L8D64
 
 \ --- Key name lookup table ---
@@ -1076,14 +1037,7 @@ GUARD &C000
 .cmd_kstatus
     LDA keyon_active
     BEQ kstatus_not_active
-    LDX #&00
-.L8F16
-    LDA msg_keys_on,X
-    BEQ L8F21
-    JSR osasci
-    INX
-    BNE L8F16
-.L8F21
+    STROUT msg_keys_on
     LDA #&d0
     STA &aa
     LDA #&8e
@@ -1137,14 +1091,7 @@ GUARD &C000
     CPX #&ff
     BEQ L8F8E
     JSR osnewl
-    LDX #&00
-.L8FA0
-    LDA &8f5b,X
-    BEQ L8FAB
-    JSR osasci
-    INX
-    BNE L8FA0
-.L8FAB
+    STROUT msg_key_redefiner
     JSR osnewl
     LDA #&d0
     STA &aa
@@ -2243,14 +2190,7 @@ GUARD &C000
     JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
     EQUS &5C, "BAU must be called from BASIC", 0
 .L98EA
-    LDX #&00
-.L98EC
-    LDA &9889,X
-    BEQ L98F7
-    JSR osasci
-    INX
-    BNE L98EC
-.L98F7
+    STROUT msg_now_splitting
     LDA &18
     STA &a9
     LDA #&00
@@ -2432,13 +2372,7 @@ GUARD &C000
     LDA &18
     STA &a9
     STZ &a8
-    LDX #&00
-.L9A5D
-    LDA &98a4,X
-    BEQ L9A68
-    JSR osasci
-    INX
-    BNE L9A5D
+    STROUT msg_now_spacing
 .L9A68
     JSR L9860
     LDY #&01
