@@ -54,8 +54,3 @@ rom_number  = &F4              \ Current paged ROM number
 zp_ptr_lo = &A8                \ General pointer low byte
 zp_ptr_hi = &A9                \ General pointer high byte
 
-\ --- Note on workspace variables ---
-\ XMOS is loaded into a sideways RAM slot (via *SRLOAD), so it can
-\ use addresses within its own image (&8000-&BFFF) as read/write variables.
-\ These are defined as labels in xmos.asm at their actual locations,
-\ not as constants here.
