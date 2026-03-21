@@ -6,45 +6,7 @@
 
 CPU 1  \ 65C02
 
-\ --- MOS entry points ---
-oscli  = &FFF7
-osbyte = &FFF4
-osword = &FFF1
-oswrch = &FFEE
-osnewl = &FFE7
-osasci = &FFE3
-osrdch = &FFE0
-osfile = &FFDD
-osargs = &FFDA
-osbget = &FFD7
-osbput = &FFD4
-osgbpb = &FFD1
-osfind = &FFCE
-gsread = &FFC5
-gsinit = &FFC2
-oseven = &FFBF
-osrdrm = &FFB9
-
-\ --- Hardware registers ---
-sheila_romsel = &FE30           \ ROM select latch
-
-\ --- Service call numbers ---
-svc_command    = &04            \ Unrecognised * command
-svc_help       = &09            \ *HELP request
-svc_claim_static = &22          \ Claim static workspace
-svc_post_reset = &27            \ Post-reset (soft break)
-
-\ --- OS workspace ---
-rom_workspace_table = &0DF0     \ Per-ROM private workspace (&0DF0,X indexed by ROM)
-
-\ --- Zero page workspace ---
-\ &A8-&A9 are OS-reserved temporary workspace for * commands
-zp_ptr_lo = &A8                 \ General pointer low byte
-zp_ptr_hi = &A9                 \ General pointer high byte
-
-\ --- ROM header flags ---
-romtype_service = &80           \ Has service entry
-romtype_6502    = &02           \ 6502 CPU type
+INCLUDE "constants.asm"
 
 ORG &8000
 GUARD &C000
