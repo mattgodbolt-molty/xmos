@@ -847,7 +847,7 @@ GUARD &C000
 .L8C79
     LDX #&00
 .L8C7B
-    LDA &8d7a,X
+    LDA msg_keyon_already,X
     BEQ L8C86
     JSR osasci
     INX
@@ -946,20 +946,21 @@ GUARD &C000
     JSR L8C89
     LDX #&00
 .L8D59
-    LDA &8d65,X
+    LDA msg_keys_redefined,X
     BEQ L8D64
     JSR osasci
     INX
     BNE L8D59
 .L8D64
     RTS
-    EQUB &0D, &4B, &65, &79, &73, &20, &6E, &6F, &77, &20, &72, &65, &64, &65, &66, &69  \ &8D65: .Keys now redefi
-    EQUB &6E, &65, &64, &0D, &00, &0D, &27, &4B, &45, &59, &4F, &4E, &27, &20, &61, &6C  \ &8D75: ned...'KEYON' al
-    EQUB &72, &65, &61, &64, &79, &20, &65, &78, &65, &63, &75, &74, &65, &64, &21, &0D  \ &8D85: ready executed!.
-    EQUB &07, &00, &0D, &52, &65, &64, &65, &66, &69, &6E, &65, &64, &20, &6B, &65, &79  \ &8D95: ...Redefined key
-    EQUB &73, &20, &6F, &66, &66, &0D, &00, &0D, &52, &65, &64, &65, &66, &69, &6E, &65  \ &8DA5: s off...Redefine
-    EQUB &64, &20, &6B, &65, &79, &73, &20, &6F, &6E, &2C, &20, &61, &6E, &64, &20, &61  \ &8DB5: d keys on, and a
-    EQUB &72, &65, &3A, &0D, &0D, &00  \ &8DC5: re:...
+.msg_keys_redefined
+    EQUB &0D : EQUS "Keys now redefined" : EQUB &0D, 0
+.msg_keyon_already
+    EQUB &0D : EQUS "'KEYON' already executed!" : EQUB &0D, &07, 0
+.msg_keys_off
+    EQUB &0D : EQUS "Redefined keys off" : EQUB &0D, 0
+.msg_keys_on
+    EQUB &0D : EQUS "Redefined keys on, and are:" : EQUB &0D, &0D, 0  \ &8DC5: re:...
 .cmd_keyoff
     LDA &8c73
     BEQ L8DE1
@@ -972,7 +973,7 @@ GUARD &C000
 .L8DE1
     LDX #&00
 .L8DE3
-    LDA &8d97,X
+    LDA msg_keys_off,X
     BEQ L8DEE
     JSR osasci
     INX
@@ -1049,7 +1050,7 @@ GUARD &C000
     BEQ L8F0C
     LDX #&00
 .L8F16
-    LDA &8dac,X
+    LDA msg_keys_on,X
     BEQ L8F21
     JSR osasci
     INX
