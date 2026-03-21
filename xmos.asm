@@ -769,7 +769,7 @@ GUARD &C000
     LDY #&00
     LDA (&b2),Y
     CMP #&ff
-    BEQ L8B4D
+    BEQ error_no_basic
     LDA &18
     STA &b3
     LDA #&00
@@ -779,7 +779,7 @@ GUARD &C000
     TAY
     LDA (&b2),Y
     CMP #&0d
-    BNE L8B62
+    BNE error_bad_program
     LDY #&03
 .L8B1C
     INY
@@ -788,26 +788,24 @@ GUARD &C000
     BEQ L8B1C
     LDA (&b2),Y
     CMP #&f4
-    BNE L8B36
+    BNE error_no_incore_name
 .L8B29
     INY
     LDA (&b2),Y
     CMP #&3e
     BEQ L8B72
     CMP #&0d
-    BEQ L8B36
+    BEQ error_no_incore_name
     BNE L8B29
-.L8B36
-    JSR copy_inline_to_stack
-    EQUB &43, &4E, &6F, &20, &69, &6E, &63, &6F, &72, &65, &20, &66, &69, &6C, &65, &6E  \ &8B39: CNo incore filen
-    EQUB &61, &6D, &65, &00  \ &8B49: ame.
-.L8B4D
-    JSR copy_inline_to_stack
-    EQUB &44, &4E, &6F, &20, &42, &41, &53, &49, &43, &20, &70, &72, &6F, &67, &72, &61  \ &8B50: DNo BASIC progra
-    EQUB &6D, &00  \ &8B60: m.
-.L8B62
-    JSR copy_inline_to_stack
-    EQUB &01, &42, &61, &64, &20, &70, &72, &6F, &67, &72, &61, &6D, &00  \ &8B65: .Bad program.
+.error_no_incore_name
+    JSR copy_inline_to_stack    \ BRK error: "No incore filename"
+    EQUB &43 : EQUS "No incore filename" : EQUB 0
+.error_no_basic
+    JSR copy_inline_to_stack    \ BRK error: "No BASIC program"
+    EQUB &44 : EQUS "No BASIC program" : EQUB 0
+.error_bad_program
+    JSR copy_inline_to_stack    \ BRK error: "Bad program"
+    EQUB &01 : EQUS "Bad program" : EQUB 0
 .L8B72
     INY
     STY &8ad3
@@ -1281,9 +1279,8 @@ GUARD &C000
     LDA &a9
     CMP #&be
     BCC L90E6
-    JSR copy_inline_to_stack
-    EQUB &48, &4E, &6F, &20, &72, &6F, &6F, &6D, &20, &66, &6F, &72, &20, &61, &6C, &69  \ &90D3: HNo room for ali
-    EQUB &61, &73, &00  \ &90E3: as.
+    JSR copy_inline_to_stack    \ BRK error: "No room for alias"
+    EQUB &48 : EQUS "No room for alias" : EQUB 0
 .L90E6
     CLC
     LDA &f2
@@ -1386,10 +1383,8 @@ GUARD &C000
     BEQ L9190
     RTS
 .L9190
-    JSR copy_inline_to_stack
-    EQUB &48, &53, &79, &6E, &74, &61, &78, &20, &3A, &20, &41, &4C, &49, &41, &53, &20  \ &9193: HSyntax : ALIAS 
-    EQUB &3C, &61, &6C, &69, &61, &73, &20, &6E, &61, &6D, &65, &3E, &20, &3C, &61, &6C  \ &91A3: <alias name> <al
-    EQUB &69, &61, &73, &3E, &00  \ &91B3: ias>.
+    JSR copy_inline_to_stack    \ BRK error: "Syntax : ALIAS <alias name> <alias>"
+    EQUB &48 : EQUS "Syntax : ALIAS <alias name> <alias>" : EQUB 0
 .check_alias
     LDA #&65
     STA &a8
@@ -1552,9 +1547,8 @@ GUARD &C000
     LDY &93a7
     JMP osfind
 .L92C8
-    JSR copy_inline_to_stack
-    EQUB &D6, &41, &6C, &69, &61, &73, &20, &66, &69, &6C, &65, &20, &6E, &6F, &74, &20  \ &92CB: .Alias file not 
-    EQUB &66, &6F, &75, &6E, &64, &00  \ &92DB: found.
+    JSR copy_inline_to_stack    \ BRK error: "Alias file not found"
+    EQUB &D6 : EQUS "Alias file not found" : EQUB 0
 .cmd_alisv
     JSR L901F
     CLC
@@ -1592,9 +1586,8 @@ GUARD &C000
     LDY &93a7
     JMP osfind
 .L9326
-    JSR copy_inline_to_stack
-    EQUB &63, &43, &61, &6E, &27, &74, &20, &6F, &70, &65, &6E, &20, &61, &6C, &69, &61  \ &9329: cCan't open alia
-    EQUB &73, &20, &66, &69, &6C, &65, &00  \ &9339: s file.
+    JSR copy_inline_to_stack    \ BRK error: "Can't open alias file"
+    EQUB &63 : EQUS "Can't open alias file" : EQUB 0
 .cmd_aliclr
     LDA #&ff
     STA &b165
@@ -1674,9 +1667,8 @@ GUARD &C000
     BEQ L940B
     JSR L93A8
     BCC L93ED
-    JSR copy_inline_to_stack
-    EQUB &EB, &49, &6E, &76, &61, &6C, &69, &64, &20, &68, &65, &78, &20, &64, &69, &67  \ &93DA: .Invalid hex dig
-    EQUB &69, &74, &00  \ &93EA: it.
+    JSR copy_inline_to_stack    \ BRK error: "Invalid hex digit"
+    EQUB &EB : EQUS "Invalid hex digit" : EQUB 0
 .L93ED
     ASL &ae
     ROL &af
@@ -2209,9 +2201,8 @@ GUARD &C000
     LDA &0230
     CMP #&0c
     BEQ L98EA
-    JSR copy_inline_to_stack
-    EQUB &5C, &42, &41, &55, &20, &6D, &75, &73, &74, &20, &62, &65, &20, &63, &61, &6C  \ &98CB: \BAU must be cal
-    EQUB &6C, &65, &64, &20, &66, &72, &6F, &6D, &20, &42, &41, &53, &49, &43, &00  \ &98DB: led from BASIC.
+    JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
+    EQUB &5C : EQUS "BAU must be called from BASIC" : EQUB 0
 .L98EA
     LDX #&00
 .L98EC
@@ -2394,9 +2385,8 @@ GUARD &C000
     LDA &0230
     CMP #&0c
     BEQ L9A55
-    JSR copy_inline_to_stack
-    EQUB &5C, &4D, &75, &73, &74, &20, &62, &65, &20, &63, &61, &6C, &6C, &65, &64, &20  \ &9A39: \Must be called 
-    EQUB &66, &72, &6F, &6D, &20, &42, &41, &53, &49, &43, &21, &00  \ &9A49: from BASIC!.
+    JSR copy_inline_to_stack    \ BRK error: "Must be called from BASIC!"
+    EQUB &5C : EQUS "Must be called from BASIC!" : EQUB 0
 .L9A55
     LDA &18
     STA &a9
@@ -2648,9 +2638,8 @@ GUARD &C000
     LDA &0230
     CMP #&0c
     BEQ L9C23
-    JSR copy_inline_to_stack
-    EQUB &4C, &56, &41, &52, &20, &77, &6F, &72, &6B, &73, &20, &6F, &6E, &6C, &79, &20  \ &9C0A: LVAR works only 
-    EQUB &69, &6E, &20, &42, &41, &53, &49, &43, &00  \ &9C1A: in BASIC.
+    JSR copy_inline_to_stack    \ BRK error: "VAR works only in BASIC"
+    EQUB &4C : EQUS "VAR works only in BASIC" : EQUB 0
 .L9C23
     LDX #&00
 .L9C25
