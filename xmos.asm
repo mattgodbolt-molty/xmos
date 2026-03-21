@@ -886,8 +886,8 @@ GUARD &C000
     JMP xi_reset_cursor_keys
 .xi_copy_up_calc
     SEC
-    LDA &030A
-    SBC &0308
+    LDA os_width_hi
+    SBC os_width_lo
     CLC
     ADC #&01
     STA xi_char
@@ -935,8 +935,8 @@ GUARD &C000
     JMP xi_reset_cursor_keys
 .xi_copy_down_calc
     SEC
-    LDA &030A
-    SBC &0308
+    LDA os_width_hi
+    SBC os_width_lo
     CLC
     ADC #&01
     CLC
@@ -2494,10 +2494,10 @@ GUARD &C000
     STA &9c6c
     LDA #&01
     STA os_wrch_dest
-    LDA &0255
+    LDA os_disp_addr
     STA &9c6d
     LDA #&02
-    STA &0255
+    STA os_disp_addr
     LDA #&50
     STA &ac
     LDA #&7c
@@ -2582,7 +2582,7 @@ GUARD &C000
     LDA &9c6c
     STA os_wrch_dest
     LDA &9c6d
-    STA &0255
+    STA os_disp_addr
     LDA #&0a
     STA crtc_addr
     LDA #&72
@@ -2771,7 +2771,7 @@ GUARD &C000
     LSR A
     LSR A
     TAX
-    LDA &9ca6,X
+    LDA hex_digits,X
     EQUB &92, &AC  \ STA (0xac)
     INC &ac
     BNE dis_print_lo_nibble
@@ -2780,7 +2780,7 @@ GUARD &C000
     LDA #&88
     AND #&0f
     TAX
-    LDA &9ca6,X
+    LDA hex_digits,X
     EQUB &92, &AC  \ STA (0xac)
     INC &ac
     BNE dis_hex_byte_rts
@@ -2794,12 +2794,12 @@ GUARD &C000
     LSR A
     LSR A
     TAX
-    LDA &9ca6,X
+    LDA hex_digits,X
     JSR oswrch
     LDA #&62
     AND #&0f
     TAX
-    LDA &9ca6,X
+    LDA hex_digits,X
     JMP oswrch
 \ --- Disassembler addressing mode format strings ---
 \ &l = low byte, &hl = high+low bytes, &b = branch offset
@@ -3042,10 +3042,10 @@ GUARD &C000
     LDY #&01
     LDA (&a8),Y
     BMI bau_space_rts
-    STA &9eed
+    STA dec_value_hi
     LDY #&02
     LDA (&a8),Y
-    STA &9eec
+    STA dec_value_lo
     PHX
     PHY
     JSR print_decimal
@@ -3553,8 +3553,9 @@ GUARD &C000
     EQUS ",,,,,,, "
     EQUB &82 : EQUS "ASCII " : EQUB &85
 \ --- Hex digit lookup table ---
+    EQUS "A"                    \ Padding byte before hex digit table
 .hex_digits
-    EQUS "A0123456789ABCDEF"
+    EQUS "0123456789ABCDEF"
 .lvar_display_value
     INY
 .lvar_parse_token
@@ -3850,13 +3851,13 @@ GUARD &C000
     LDX #&10
     LDA #&00
 .print_dec_shift
-    ASL &9eec
-    ROL &9eed
+    ASL dec_value_lo
+    ROL dec_value_hi
     ROL A
     CMP #&0a
     BCC print_dec_next_bit
     SBC #&0a
-    INC &9eec
+    INC dec_value_lo
 .print_dec_next_bit
     DEX
     BNE print_dec_shift
@@ -3864,8 +3865,8 @@ GUARD &C000
     ADC #&30
     PHA
     INY
-    LDA &9eec
-    ORA &9eed
+    LDA dec_value_lo
+    ORA dec_value_hi
     BNE print_dec_loop
 .print_dec_done
     CPY #&05
@@ -3875,14 +3876,20 @@ GUARD &C000
     INY
     BNE print_dec_done
 .print_dec_output
-    STY &9eee
+    STY dec_digit_count
 .print_dec_digit
     PLA
     JSR oswrch
-    DEC &9eee
+    DEC dec_digit_count
     BNE print_dec_digit
     RTS
-    EQUB &00, &00, &00, &00
+.dec_value_lo
+    EQUB &00
+.dec_value_hi
+    EQUB &00
+.dec_digit_count
+    EQUB &00
+    EQUB &00                   \ padding
 .features_text
     EQUS "In addition to the commands shown under *HELP XMOS,  several  extended keyboard facilities are available whilst in *XON mode.", 13
     EQUB 13
