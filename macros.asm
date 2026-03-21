@@ -16,3 +16,13 @@ MACRO STROUT addr
 .done
 }
 ENDMACRO
+
+\ DIS opcode table entry: valid opcode with mnemonic and addressing mode
+MACRO OP mnem, mode
+    EQUS mnem : EQUB mode
+ENDMACRO
+
+\ DIS opcode table entry: invalid/undefined opcode
+MACRO NOOP
+    EQUB &00, &00, &00, &00
+ENDMACRO
