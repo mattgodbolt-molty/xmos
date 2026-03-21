@@ -2463,13 +2463,13 @@ GUARD &C000
     BEQ mem_setup_display
     JSR parse_hex_word
     LDA &ae
-    STA &9c68
+    STA mem_edit_lo
     LDA &af
-    STA &9c69
+    STA mem_edit_hi
 .mem_setup_display
-    LDA &9c68
+    LDA mem_edit_lo
     STA &a8
-    LDA &9c69
+    LDA mem_edit_hi
     STA &a9
     LDA &a8
     AND #&07
@@ -2491,11 +2491,11 @@ GUARD &C000
     DEX
     BPL mem_copy_header
     LDA os_wrch_dest
-    STA &9c6c
+    STA mem_mode
     LDA #&01
     STA os_wrch_dest
     LDA os_disp_addr
-    STA &9c6d
+    STA mem_page_size
     LDA #&02
     STA os_disp_addr
     LDA #&50
@@ -2579,9 +2579,9 @@ GUARD &C000
     JSR cmd_dispatch
     JMP mem_adjust_ptr
 .mem_set_mode
-    LDA &9c6c
+    LDA mem_mode
     STA os_wrch_dest
-    LDA &9c6d
+    LDA mem_page_size
     STA os_disp_addr
     LDA #&0a
     STA crtc_addr
@@ -2849,9 +2849,9 @@ GUARD &C000
     JSR parse_hex_word
     BRA dis_print_header
 .dis_display_line
-    LDA &9c6a
+    LDA mem_vdu_1
     STA &ae
-    LDA &9c6b
+    LDA mem_vdu_2
     STA &af
 .dis_print_header
     LDA #&82
@@ -2977,9 +2977,9 @@ GUARD &C000
     JMP dis_print_header
 .dis_save_state
     LDA &ae
-    STA &9c6a
+    STA mem_vdu_1
     LDA &af
-    STA &9c6b
+    STA mem_vdu_2
     LDA #&00
     STA &ff
     RTS
@@ -3533,9 +3533,19 @@ GUARD &C000
     RTS
 \ --- MEM editor configuration data ---
 .mem_workspace
-    EQUB &00, &00, &00         \ Workspace variables
-    EQUB &12, &E3, &16         \ VDU codes: text window? mode?
-    EQUB &01, &03              \ Colour settings
+    EQUB &00, &00
+.mem_edit_lo
+    EQUB &00
+.mem_edit_hi
+    EQUB &12
+.mem_vdu_1
+    EQUB &E3
+.mem_vdu_2
+    EQUB &16
+.mem_mode
+    EQUB &01
+.mem_page_size
+    EQUB &03
 .mem_column
     EQUB &02                   \ MEM column counter (0-7)
     EQUB &88, &89, &8A, &8B   \ Key codes: left, right, down, up
