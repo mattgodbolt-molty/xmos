@@ -1,282 +1,371 @@
-\ XMOS - MOS Extension ROM
+\ ============================================================================
+\ XMOS — MOS Extension ROM
 \ By Richard Talbot-Watkins and Matt Godbolt, 1992
 \ Reverse engineered disassembly
+\ ============================================================================
 
 CPU 1  \ 65C02
 
-\ OS entry points
-osrdrm = &FFB9
-oseven = &FFBF
-gsinit = &FFC2
-gsread = &FFC5
-osfind = &FFCE
-osgbpb = &FFD1
-osbput = &FFD4
-osbget = &FFD7
-osargs = &FFDA
-osfile = &FFDD
-osrdch = &FFE0
-osasci = &FFE3
-osnewl = &FFE7
-oswrch = &FFEE
-osword = &FFF1
+\ --- MOS entry points ---
+oscli  = &FFF7
 osbyte = &FFF4
-oscli = &FFF7
+osword = &FFF1
+oswrch = &FFEE
+osnewl = &FFE7
+osasci = &FFE3
+osrdch = &FFE0
+osfile = &FFDD
+osargs = &FFDA
+osbget = &FFD7
+osbput = &FFD4
+osgbpb = &FFD1
+osfind = &FFCE
+gsread = &FFC5
+gsinit = &FFC2
+oseven = &FFBF
+osrdrm = &FFB9
+
+\ --- Hardware registers ---
+sheila_romsel = &FE30           \ ROM select latch
+
+\ --- Service call numbers ---
+svc_command    = &04            \ Unrecognised * command
+svc_help       = &09            \ *HELP request
+svc_claim_static = &22          \ Claim static workspace
+svc_post_reset = &27            \ Post-reset (soft break)
+
+\ --- OS workspace ---
+rom_workspace_table = &0DF0     \ Per-ROM private workspace (&0DF0,X indexed by ROM)
+
+\ --- Zero page workspace ---
+\ &A8-&A9 are OS-reserved temporary workspace for * commands
+zp_ptr_lo = &A8                 \ General pointer low byte
+zp_ptr_hi = &A9                 \ General pointer high byte
+
+\ --- ROM header flags ---
+romtype_service = &80           \ Has service entry
+romtype_6502    = &02           \ 6502 CPU type
 
 ORG &8000
 GUARD &C000
 
-    EQUB &00, &00, &00, &4C, &2B, &80, &82, &16, &01, &4D, &4F, &53, &20, &45, &78, &74  \ &8000: ...L+....MOS Ext
-    EQUB &65, &6E, &73, &69, &6F, &6E, &00, &28, &43, &29, &20, &52, &54, &57, &20, &61  \ &8010: ension.(C) RTW a
-    EQUB &6E, &64, &20, &4D, &47, &20, &31, &39, &39, &32, &00  \ &8020: nd MG 1992.
-    CMP #&04
-    BNE L8032
-    JMP L81BE
-.L8032
-    CMP #&09
-    BEQ L804A
-    CMP #&27
-    BNE L803D
-    JMP L8484
-.L803D
-    CMP #&22
-    BEQ L8042
+\ ============================================================================
+\ ROM Header
+\ ============================================================================
+    BRK : BRK : BRK             \ No language entry
+    JMP service_entry           \ Service entry point
+    EQUB romtype_service OR romtype_6502
+    EQUB LO(copyright_ptr - &8000) \ Copyright offset from ROM start
+.rom_start
+    EQUB &01                    \ Version number
+    EQUS "MOS Extension"       \ ROM title
+.copyright_ptr
+    EQUB 0                     \ Title terminator / copyright pointer target
+    EQUS "(C) RTW and MG 1992" \ Copyright string
+    EQUB 0                     \ Copyright terminator
+
+\ ============================================================================
+\ Service entry — dispatches on service call number in A
+\ ============================================================================
+.service_entry
+    CMP #svc_command
+{
+    BNE not_command
+    JMP handle_command
+.not_command
+}
+    CMP #svc_help
+    BEQ handle_help
+    CMP #svc_post_reset
+{
+    BNE not_reset
+    JMP handle_reset
+.not_reset
+}
+    CMP #svc_claim_static
+    BEQ handle_claim_static
     RTS
-.L8042
+
+\ Handle service call &22: claim static workspace for extended input
+.handle_claim_static
     DEY
     TYA
-    STA &0df0,X
-    LDA #&22
+    STA rom_workspace_table,X
+    LDA #svc_claim_static
     RTS
-.L804A
+\ ============================================================================
+\ *HELP handler (service call &09)
+\ ============================================================================
+.handle_help
     PHA
     PHX
     PHY
     LDX #&00
-.L804F
-    LDA (&f2),Y
-    CMP #&0d
-    BNE L808F
-    LDA &8064,X
-    BEQ L8060
+{
+.print_loop
+    LDA (&f2),Y                 \ Check if bare *HELP (CR = end of line)
+    CMP #&0D
+    BNE help_has_argument
+    LDA help_title_text,X       \ Print help title string
+    BEQ done
     JSR osasci
     INX
-    BNE L804F
-.L8060
+    BNE print_loop
+.done
     PLY
     PLX
     PLA
     RTS
-    EQUB &0D, &4D, &4F, &53, &20, &45, &78, &74, &65, &6E, &73, &69, &6F, &6E, &0D, &20  \ &8064: .MOS Extension. 
-    EQUB &20, &58, &4D, &4F, &53, &0D, &20, &20, &46, &45, &41, &54, &55, &52, &45, &53  \ &8074:  XMOS.  FEATURES
-    EQUB &0D, &00, &46, &45, &41, &54, &55, &52, &45, &53, &00  \ &8084: ..FEATURES.
-.L808F
+}
+.help_title_text
+    EQUB &0D
+    EQUS "MOS Extension"
+    EQUB &0D
+    EQUS "  XMOS"
+    EQUB &0D
+    EQUS "  FEATURES"
+    EQUB &0D, 0
+.features_keyword
+    EQUS "FEATURES"
+    EQUB 0
+\ *HELP with an argument — check for "XMOS", "FEATURES", or a command name
+.help_has_argument
     PHY
-    LDA #&59
-    STA &a8
-    LDA #&84
-    STA &a9
-    JSR L8A26
-    BCC L811B
+    LDA #LO(xmos_keyword)
+    STA zp_ptr_lo
+    LDA #HI(xmos_keyword)
+    STA zp_ptr_hi
+    JSR compare_string          \ Compare argument against "XMOS"
+    BCC help_try_features
     PLY
-    LDA #&19
-    STA &a8
-    LDA #&82
-    STA &a9
-    JSR L89F0
-    EQUB &0D, &4D, &4F, &53, &20, &45, &78, &74, &65, &6E, &73, &69, &6F, &6E, &20, &63  \ &80A9: .MOS Extension c
-    EQUB &6F, &6D, &6D, &61, &6E, &64, &73, &3A, &0E, &0D, &00  \ &80B9: ommands:...
-    LDA #&19
-    STA &a8
-    LDA #&82
-    STA &a9
-.L80CC
+    \ Matched "XMOS" — print all commands from the command table
+    LDA #LO(command_table)
+    STA zp_ptr_lo
+    LDA #HI(command_table)
+    STA zp_ptr_hi
+    JSR print_inline
+    EQUB &0D
+    EQUS "MOS Extension commands:"
+    EQUB &0E, &0D, 0           \ &0E = mode 1 (double height?)
+    LDA #LO(command_table)
+    STA zp_ptr_lo
+    LDA #HI(command_table)
+    STA zp_ptr_hi
+.help_print_loop
     LDY #&00
-    EQUB &B2, &A8  \ LDA (0xa8)
-    CMP #&ff
-    BEQ L8117
-    LDA #&20
+    EQUB &B2, &A8              \ LDA (zp_ptr_lo) — 65C02 (zp) indirect
+    CMP #&FF                   \ End of table marker?
+    BEQ help_done
+    LDA #&20                   \ Print two spaces indent
     JSR osasci
     JSR osasci
-.L80DC
-    LDA (&a8),Y
-    BEQ L80E6
+{
+.print_name                     \ Print command name
+    LDA (zp_ptr_lo),Y
+    BEQ name_done
     JSR osasci
     INY
-    BNE L80DC
-.L80E6
-    TYA
-    SEC
+    BNE print_name
+.name_done
+}
+    TYA                         \ Pad with spaces to column 11
+    SEC                         \ (9 - name_length spaces)
     SBC #&09
-    EOR #&ff
+    EOR #&FF
     INC A
     TAX
-.L80EE
+{
+.pad_loop
     LDA #&20
     JSR osasci
     DEX
-    BNE L80EE
+    BNE pad_loop
+}
+    INY                         \ Skip null terminator
+    INY                         \ Skip 2-byte handler address
     INY
+    DEY                         \ Back up one (INY at start of loop)
+{
+.print_help                     \ Print help text
     INY
-    INY
-    DEY
-.L80FA
-    INY
-    LDA (&a8),Y
-    BEQ L8104
+    LDA (zp_ptr_lo),Y
+    BEQ help_text_done
     JSR osasci
-    BRA L80FA
-.L8104
+    BRA print_help
+.help_text_done
+}
     JSR osnewl
-    INY
+    INY                         \ Advance pointer past this entry
     CLC
     TYA
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
-    JMP L80CC
-.L8117
+    STA zp_ptr_hi
+    JMP help_print_loop
+.help_done
     PLY
     PLX
     PLA
     RTS
-.L811B
-    LDA #&86
-    STA &a8
-    LDA #&80
-    STA &a9
+\ Check if *HELP FEATURES
+.help_try_features
+    LDA #LO(features_keyword)
+    STA zp_ptr_lo
+    LDA #HI(features_keyword)
+    STA zp_ptr_hi
     PLY
     PHY
-    JSR L8A26
-    BCC L814A
+    JSR compare_string
+    BCC help_try_command
     PLY
-    LDA #&f0
-    STA &a8
-    LDA #&9e
-    STA &a9
+    \ Matched "FEATURES" — print features text from &9EF0
+    LDA #LO(features_text)
+    STA zp_ptr_lo
+    LDA #HI(features_text)
+    STA zp_ptr_hi
     LDY #&00
-.L8135
-    LDA (&a8),Y
-    BEQ L8143
+{
+.print_loop
+    LDA (zp_ptr_lo),Y
+    BEQ done
     JSR osasci
     INY
-    BNE L8135
-    INC &a9
-    BRA L8135
-.L8143
+    BNE print_loop
+    INC zp_ptr_hi
+    BRA print_loop
+.done
+}
     JSR osnewl
     PLY
     PLX
     PLA
     RTS
-.L814A
+
+\ Check if *HELP <command name> — try each command in table
+.help_try_command
     PLY
-    LDA #&19
-    STA &a8
-    LDA #&82
-    STA &a9
-.L8153
+    LDA #LO(command_table)
+    STA zp_ptr_lo
+    LDA #HI(command_table)
+    STA zp_ptr_hi
+.help_try_next_cmd
     PHY
-    JSR L8A26
-    BCS L8185
+    JSR compare_string
+    BCS help_print_single_cmd
+{
     LDY #&00
-.L815B
+.skip_name                      \ Skip past command name
     INY
-    LDA (&a8),Y
-    BNE L815B
+    LDA (zp_ptr_lo),Y
+    BNE skip_name
+    INY                         \ Skip null
+    INY                         \ Skip 2-byte handler address
     INY
+.skip_help                      \ Skip past help text
     INY
-    INY
-.L8163
-    INY
-    LDA (&a8),Y
-    BNE L8163
-    INY
+    LDA (zp_ptr_lo),Y
+    BNE skip_help
+}
+    INY                         \ Advance pointer to next entry
     CLC
     TYA
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     PLY
-    EQUB &B2, &A8  \ LDA (0xa8)
-    CMP #&ff
-    BNE L8153
-    LDA #&0f
+    EQUB &B2, &A8              \ LDA (zp_ptr_lo) — 65C02 (zp) indirect
+    CMP #&FF                   \ End of table?
+    BNE help_try_next_cmd
+    LDA #&0F                   \ Print mode 0 (reset double height)
     JSR osasci
     PLY
     PLX
     PLA
     RTS
-.L8185
+
+\ Matched a specific command — print its help entry
+.help_print_single_cmd
     PLY
-    LDA #&20
+    LDA #&20                   \ Two space indent
     JSR osasci
     JSR osasci
-    LDY #&ff
-.L8190
+    LDY #&FF
+{
+.print_name                     \ Print command name
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     JSR osasci
     CMP #&00
-    BNE L8190
-    TYA
+    BNE print_name
+}
+    TYA                         \ Pad with spaces to column 11
     SEC
     SBC #&09
-    EOR #&ff
+    EOR #&FF
     INC A
     TAX
-.L81A2
+{
+.pad_loop
     LDA #&20
     JSR osasci
     DEX
-    BNE L81A2
+    BNE pad_loop
+}
+    INY                         \ Skip handler address (2 bytes)
     INY
     INY
-    INY
-.L81AD
+{
+.print_help_text                \ Print the help description
     LDA (&a8),Y
-    BEQ L81B7
+    BEQ done
     JSR osasci
     INY
-    BNE L81AD
-.L81B7
+    BNE print_help_text
+.done
+}
     JSR osnewl
     PLY
     PLX
     PLA
     RTS
-.L81BE
+
+\ ============================================================================
+\ * command handler (service call &04) — dispatch unrecognised commands
+\ ============================================================================
+.handle_command
     PHA
     PHX
     PHY
-    LDA #&19
+    LDA #LO(command_table)
     STA &a8
-    LDA #&82
+    LDA #HI(command_table)
     STA &a9
-.L81C9
+.cmd_try_next
     PHY
-    EQUB &B2, &A8  \ LDA (0xa8)
-    CMP #&ff
-    BEQ L81F5
-    JSR L8A26
-    BCS L81F9
+    EQUB &B2, &A8              \ LDA (&A8) — 65C02 (zp) indirect
+    CMP #&FF                   \ End of command table?
+    BEQ cmd_not_found
+    JSR compare_string
+    BCS cmd_found
+{
     LDY #&00
-.L81D7
+.skip_name                      \ Skip command name
     INY
     LDA (&a8),Y
-    BNE L81D7
-    INY
-    INY
-    INY
-.L81DF
+    BNE skip_name
+    INY                         \ Skip null terminator
+    INY                         \ Skip handler address low byte
+    INY                         \ Skip handler address high byte
+.skip_help                      \ Skip help text
     INY
     LDA (&a8),Y
-    BNE L81DF
-    INY
+    BNE skip_help
+}
+    INY                         \ Advance past help text null terminator
     TYA
     CLC
     ADC &a8
@@ -285,84 +374,108 @@ GUARD &C000
     ADC #&00
     STA &a9
     PLY
-    JMP L81C9
-.L81F5
+    JMP cmd_try_next
+
+.cmd_not_found
     PLY
-    JMP L91B8
-.L81F9
+    JMP check_alias             \ Not a built-in command, try aliases
+
+.cmd_found
     PLY
     LDY #&00
-.L81FC
+{
+.skip_name                      \ Skip past command name to handler address
     INY
     LDA (&a8),Y
-    BNE L81FC
+    BNE skip_name
+}
     INY
-    LDA (&a8),Y
-    STA &8217
+    LDA (&a8),Y                \ Load handler address low byte
+    STA cmd_dispatch_addr + 1
     INY
-    LDA (&a8),Y
-    STA &8218
-    JSR L8216
+    LDA (&a8),Y                \ Load handler address high byte
+    STA cmd_dispatch_addr + 2
+    JSR cmd_dispatch
     PLY
     PLX
     PLA
-    LDA #&00
+    LDA #&00                   \ Claim the service call
     RTS
-.L8216
-    JMP L8DCB
-    EQUB &41, &4C, &49, &41, &53, &00, &33, &90, &3C, &61, &6C, &69, &61, &73, &20, &6E  \ &8219: ALIAS.3.<alias n
-    EQUB &61, &6D, &65, &3E, &20, &3C, &61, &6C, &69, &61, &73, &3E, &00, &41, &4C, &49  \ &8229: ame> <alias>.ALI
-    EQUB &41, &53, &45, &53, &00, &41, &91, &53, &68, &6F, &77, &73, &20, &61, &63, &74  \ &8239: ASES.A.Shows act
-    EQUB &69, &76, &65, &20, &61, &6C, &69, &61, &73, &65, &73, &00, &41, &4C, &49, &43  \ &8249: ive aliases.ALIC
-    EQUB &4C, &52, &00, &40, &93, &43, &6C, &65, &61, &72, &73, &20, &61, &6C, &6C, &20  \ &8259: LR.@.Clears all 
-    EQUB &61, &6C, &69, &61, &73, &65, &73, &00, &41, &4C, &49, &4C, &44, &00, &85, &92  \ &8269: aliases.ALILD...
-    EQUB &4C, &6F, &61, &64, &73, &20, &61, &6C, &69, &61, &73, &20, &66, &69, &6C, &65  \ &8279: Loads alias file
-    EQUB &00, &41, &4C, &49, &53, &56, &00, &E1, &92, &53, &61, &76, &65, &73, &20, &61  \ &8289: .ALISV...Saves a
-    EQUB &6C, &69, &61, &73, &20, &66, &69, &6C, &65, &00, &42, &41, &55, &00, &C1, &98  \ &8299: lias file.BAU...
-    EQUB &53, &70, &6C, &69, &74, &73, &20, &74, &6F, &20, &73, &69, &6E, &67, &6C, &65  \ &82A9: Splits to single
-    EQUB &20, &63, &6F, &6D, &6D, &61, &6E, &64, &73, &00, &44, &45, &46, &4B, &45, &59  \ &82B9:  commands.DEFKEY
-    EQUB &53, &00, &78, &8F, &44, &65, &66, &69, &6E, &65, &73, &20, &6E, &65, &77, &20  \ &82C9: S.x.Defines new 
-    EQUB &6B, &65, &79, &73, &00, &44, &49, &53, &00, &05, &97, &3C, &61, &64, &64, &72  \ &82D9: keys.DIS...<addr
-    EQUB &3E, &20, &2D, &20, &64, &69, &73, &61, &73, &73, &65, &6D, &62, &6C, &65, &20  \ &82E9: > - disassemble 
-    EQUB &6D, &65, &6D, &6F, &72, &79, &00, &4B, &45, &59, &4F, &4E, &00, &54, &8D, &45  \ &82F9: memory.KEYON.T.E
-    EQUB &6E, &61, &62, &6C, &65, &73, &20, &72, &65, &64, &65, &66, &69, &6E, &65, &64  \ &8309: nables redefined
-    EQUB &20, &6B, &65, &79, &73, &00, &4B, &45, &59, &4F, &46, &46, &00, &CB, &8D, &44  \ &8319:  keys.KEYOFF...D
-    EQUB &69, &73, &61, &62, &6C, &65, &73, &20, &72, &65, &64, &65, &66, &69, &6E, &65  \ &8329: isables redefine
-    EQUB &64, &20, &6B, &65, &79, &73, &00, &4B, &53, &54, &41, &54, &55, &53, &00, &0F  \ &8339: d keys.KSTATUS..
-    EQUB &8F, &44, &69, &73, &70, &6C, &61, &79, &73, &20, &4B, &45, &59, &4F, &4E, &20  \ &8349: .Displays KEYON 
-    EQUB &73, &74, &61, &74, &75, &73, &00, &4C, &00, &95, &8B, &53, &65, &6C, &65, &63  \ &8359: status.L...Selec
-    EQUB &74, &73, &20, &6D, &6F, &64, &65, &20, &31, &32, &38, &00, &4C, &56, &41, &52  \ &8369: ts mode 128.LVAR
-    EQUB &00, &00, &9C, &53, &68, &6F, &77, &73, &20, &63, &75, &72, &72, &65, &6E, &74  \ &8379: ...Shows current
-    EQUB &20, &76, &61, &72, &69, &61, &62, &6C, &65, &73, &00, &4D, &45, &4D, &00, &0C  \ &8389:  variables.MEM..
-    EQUB &94, &3C, &61, &64, &64, &72, &3E, &20, &2D, &20, &6D, &65, &6D, &6F, &72, &79  \ &8399: .<addr> - memory
-    EQUB &20, &65, &64, &69, &74, &6F, &72, &00, &53, &00, &68, &8A, &53, &61, &76, &65  \ &83A9:  editor.S.h.Save
-    EQUB &73, &20, &42, &41, &53, &49, &43, &20, &77, &69, &74, &68, &20, &69, &6E, &63  \ &83B9: s BASIC with inc
-    EQUB &6F, &72, &65, &20, &6E, &61, &6D, &65, &00, &53, &50, &41, &43, &45, &00, &2F  \ &83C9: ore name.SPACE./
-    EQUB &9A, &49, &6E, &73, &65, &72, &74, &73, &20, &73, &70, &61, &63, &65, &73, &20  \ &83D9: .Inserts spaces 
-    EQUB &69, &6E, &74, &6F, &20, &70, &72, &6F, &67, &72, &61, &6D, &73, &00, &53, &54  \ &83E9: into programs.ST
-    EQUB &4F, &52, &45, &00, &46, &93, &4B, &65, &65, &70, &73, &20, &66, &75, &6E, &63  \ &83F9: ORE.F.Keeps func
-    EQUB &74, &69, &6F, &6E, &20, &6B, &65, &79, &73, &20, &6F, &6E, &20, &62, &72, &65  \ &8409: tion keys on bre
-    EQUB &61, &6B, &00, &58, &4F, &4E, &00, &5E, &84, &45, &6E, &61, &62, &6C, &65, &73  \ &8419: ak.XON.^.Enables
-    EQUB &20, &65, &78, &74, &65, &6E, &64, &65, &64, &20, &69, &6E, &70, &75, &74, &00  \ &8429:  extended input.
-    EQUB &58, &4F, &46, &46, &00, &6C, &84, &44, &69, &73, &61, &62, &6C, &65, &73, &20  \ &8439: XOFF.l.Disables 
-    EQUB &65, &78, &74, &65, &6E, &64, &65, &64, &20, &69, &6E, &70, &75, &74, &00, &FF  \ &8449: extended input..
-    EQUB &58, &4D, &4F, &53, &00  \ &8459: XMOS.
-.L845E
-    LDA #&ff
-    STA &847f
-    LDA #&04
-    LDX #&01
+
+.cmd_dispatch
+.cmd_dispatch_addr
+    JMP cmd_keyoff                  \ Self-modified: handler address written here
+\ ============================================================================
+\ Command table
+\ Format: name (null-terminated), handler address (2 bytes LE), help text (null-terminated)
+\ Terminated by &FF
+\ ============================================================================
+.command_table
+    EQUS "ALIAS"    : EQUB 0 : EQUW cmd_alias    : EQUS "<alias name> <alias>" : EQUB 0
+    EQUS "ALIASES"  : EQUB 0 : EQUW cmd_aliases  : EQUS "Shows active aliases" : EQUB 0
+    EQUS "ALICLR"   : EQUB 0 : EQUW cmd_aliclr   : EQUS "Clears all aliases" : EQUB 0
+    EQUS "ALILD"    : EQUB 0 : EQUW cmd_alild    : EQUS "Loads alias file" : EQUB 0
+    EQUS "ALISV"    : EQUB 0 : EQUW cmd_alisv    : EQUS "Saves alias file" : EQUB 0
+    EQUS "BAU"      : EQUB 0 : EQUW cmd_bau      : EQUS "Splits to single commands" : EQUB 0
+    EQUS "DEFKEYS"  : EQUB 0 : EQUW cmd_defkeys  : EQUS "Defines new keys" : EQUB 0
+    EQUS "DIS"      : EQUB 0 : EQUW cmd_dis      : EQUS "<addr> - disassemble memory" : EQUB 0
+    EQUS "KEYON"    : EQUB 0 : EQUW cmd_keyon    : EQUS "Enables redefined keys" : EQUB 0
+    EQUS "KEYOFF"   : EQUB 0 : EQUW cmd_keyoff   : EQUS "Disables redefined keys" : EQUB 0
+    EQUS "KSTATUS"  : EQUB 0 : EQUW cmd_kstatus  : EQUS "Displays KEYON status" : EQUB 0
+    EQUS "L"        : EQUB 0 : EQUW cmd_l        : EQUS "Selects mode 128" : EQUB 0
+    EQUS "LVAR"     : EQUB 0 : EQUW cmd_lvar     : EQUS "Shows current variables" : EQUB 0
+    EQUS "MEM"      : EQUB 0 : EQUW cmd_mem      : EQUS "<addr> - memory editor" : EQUB 0
+    EQUS "S"        : EQUB 0 : EQUW cmd_s        : EQUS "Saves BASIC with incore name" : EQUB 0
+    EQUS "SPACE"    : EQUB 0 : EQUW cmd_space    : EQUS "Inserts spaces into programs" : EQUB 0
+    EQUS "STORE"    : EQUB 0 : EQUW cmd_store    : EQUS "Keeps function keys on break" : EQUB 0
+    EQUS "XON"      : EQUB 0 : EQUW cmd_xon      : EQUS "Enables extended input" : EQUB 0
+    EQUS "XOFF"     : EQUB 0 : EQUW cmd_xoff     : EQUS "Disables extended input" : EQUB 0
+    EQUB &FF                  \ End of command table
+.xmos_keyword
+    EQUS "XMOS"
+    EQUB 0
+\ ============================================================================
+\ *XON — Enable extended input
+\ ============================================================================
+.cmd_xon
+    LDA #&FF
+    STA xon_flag
+    LDA #&04                   \ OSBYTE 4: set cursor key status
+    LDX #&01                   \ X=1: cursor editing mode
     LDY #&00
     JMP osbyte
-.L846C
+
+\ ============================================================================
+\ *XOFF — Disable extended input
+\ ============================================================================
+.cmd_xoff
     LDA #&00
-    STA &847f
-    LDA #&04
-    LDX #&00
+    STA xon_flag
+    LDA #&04                   \ OSBYTE 4: set cursor key status
+    LDX #&00                   \ X=0: normal cursor keys
     LDY #&00
     JMP osbyte
-    EQUB &A9, &07, &4C, &EE, &FF, &FF, &1A, &1A, &0D, &08  \ &847A: ..L.......
-.L8484
+
+\ --- Small utility: ring the bell ---
+.beep
+    LDA #&07                   \ BEL character
+    JMP oswrch
+\ --- Workspace variables (within ROM, self-modified) ---
+.xon_flag
+    EQUB &FF                   \ non-zero = XON active
+.cursor_col
+    EQUB &1A                   \ cursor column (extended input state)
+.cursor_max_col
+    EQUB &1A                   \ max column
+.cursor_cr
+    EQUB &0D                   \ CR character
+.cursor_bs
+    EQUB &08                   \ backspace character
+
+\ ============================================================================
+\ Post-reset handler (service call &27)
+\ ============================================================================
+.handle_reset
     PHA
     PHX
     PHY
@@ -381,7 +494,7 @@ GUARD &C000
     STA &8c73
     JSR L8C89
 .L84AC
-    LDA &847f
+    LDA xon_flag
     BEQ L84C1
     LDA #&04
     LDX #&01
@@ -484,81 +597,107 @@ GUARD &C000
     EQUB &B1, &AE, &10, &FB, &CD, &82, &84, &D0, &15, &A0, &FF, &C8, &B1, &AE, &30, &0B  \ &89C1: ..............0.
     EQUB &8D, &82, &84, &5A, &20, &D9, &85, &7A, &4C, &CC, &89, &4C, &8D, &89, &C8, &C8  \ &89D1: ...Z ..zL..L....
     EQUB &98, &18, &65, &AE, &85, &AE, &A5, &AF, &69, &00, &85, &AF, &4C, &BC, &89  \ &89E1: ..e.....i...L..
-.L89F0
-    PLA
+\ ============================================================================
+\ print_inline — Print null-terminated string that follows the JSR
+\ The return address on the stack points to the string data.
+\ After printing, returns to the instruction after the null terminator.
+\ ============================================================================
+.print_inline
+    PLA                         \ Pull return address (points to string - 1)
     STA &a8
     PLA
     STA &a9
     LDY #&00
-.L89F8
+{
+.loop
     INY
     LDA (&a8),Y
     JSR osasci
-    BNE L89F8
-    CLC
+    BNE loop
+}
+    CLC                         \ Adjust return address past the string
     TYA
     ADC &a8
     STA &a8
     LDA &a9
     ADC #&00
-    PHA
+    PHA                         \ Push adjusted return address
     LDA &a8
     PHA
-    RTS
-.L8A0F
-    PLA
+    RTS                         \ "Return" to instruction after the string
+
+\ ============================================================================
+\ copy_inline_to_stack — Copy inline string to &0100 (stack page) and execute
+\ Used for self-modifying command strings that run from the stack.
+\ ============================================================================
+.copy_inline_to_stack
+    PLA                         \ Pull return address (points to code - 1)
     STA &a8
     PLA
     STA &a9
     LDA #&00
     TAY
-    STA &0100,Y
-.L8A1B
+    STA &0100,Y                \ Store null at start of stack page
+{
+.loop
     INY
-    LDA (&a8),Y
+    LDA (&a8),Y                \ Copy bytes to stack page
     STA &0100,Y
-    BNE L8A1B
-    JMP &0100
-.L8A26
+    BNE loop
+}
+    JMP &0100                  \ Execute the copied code
+\ ============================================================================
+\ compare_string — Compare command line against string at (&A8)
+\ Entry: (&F2),Y = command line position, (&A8) = string to compare
+\ Exit:  C=1 if match, C=0 if no match. Y advanced past the match.
+\ Supports abbreviated commands (e.g. "D." matches "DIS")
+\ Converts lowercase to uppercase for case-insensitive comparison
+\ ============================================================================
+.compare_string
     LDX #&00
-    LDA &a8
-    STA &8a49
-    STA &8a4e
+    LDA &a8                     \ Self-modify the CMP and LDA absolute,X below
+    STA cmp_str_addr + 1
+    STA lda_str_addr + 1
     LDA &a9
-    STA &8a4a
-    STA &8a4f
-.L8A38
-    LDA (&f2),Y
-    CMP #&2e
-    BEQ L8A5C
-    CMP #&61
-    BCC L8A48
-    CMP #&7b
-    BCS L8A48
-    AND #&df
-.L8A48
-    CMP &831f,X
-    BEQ L8A61
-    LDA &831f,X
-    BNE L8A65
-    LDA (&f2),Y
-    CMP #&0d
-    BEQ L8A5C
-    CMP #&20
-    BNE L8A65
-.L8A5C
-    STY &8a67
-    SEC
+    STA cmp_str_addr + 2
+    STA lda_str_addr + 2
+{
+.loop
+    LDA (&f2),Y                 \ Get next character from command line
+    CMP #&2E                   \ '.' = abbreviation marker
+    BEQ matched
+    CMP #&61                   \ Convert lowercase to uppercase
+    BCC no_convert
+    CMP #&7B
+    BCS no_convert
+    AND #&DF                   \ Clear bit 5 = uppercase
+.no_convert
+.*cmp_str_addr
+    CMP &831F,X                \ Compare against string (self-modified address)
+    BEQ next_char
+.*lda_str_addr
+    LDA &831F,X                \ Check if we reached end of keyword (null)
+    BNE no_match
+    LDA (&f2),Y                \ At end of keyword: check command line terminator
+    CMP #&0D                   \ CR = end of line
+    BEQ matched
+    CMP #&20                   \ Space = argument separator
+    BNE no_match
+.matched
+    STY compare_string_y       \ Save Y position after match
+    SEC                         \ C=1: match found
     RTS
-.L8A61
+.next_char
     INX
     INY
-    BNE L8A38
-.L8A65
-    CLC
+    BNE loop
+.no_match
+}
+    CLC                         \ C=0: no match
     RTS
-    EQUB &07  \ &8A67: .
-.L8A68
+.compare_string_y
+    EQUB &07                   \ Saved Y position after last match
+.cmd_s
     LDY #&00
 .L8A6A
     LDA &8ae5,Y
@@ -630,7 +769,7 @@ GUARD &C000
     LDY #&00
     LDA (&b2),Y
     CMP #&ff
-    BEQ L8B4D
+    BEQ error_no_basic
     LDA &18
     STA &b3
     LDA #&00
@@ -640,7 +779,7 @@ GUARD &C000
     TAY
     LDA (&b2),Y
     CMP #&0d
-    BNE L8B62
+    BNE error_bad_program
     LDY #&03
 .L8B1C
     INY
@@ -649,26 +788,24 @@ GUARD &C000
     BEQ L8B1C
     LDA (&b2),Y
     CMP #&f4
-    BNE L8B36
+    BNE error_no_incore_name
 .L8B29
     INY
     LDA (&b2),Y
     CMP #&3e
     BEQ L8B72
     CMP #&0d
-    BEQ L8B36
+    BEQ error_no_incore_name
     BNE L8B29
-.L8B36
-    JSR L8A0F
-    EQUB &43, &4E, &6F, &20, &69, &6E, &63, &6F, &72, &65, &20, &66, &69, &6C, &65, &6E  \ &8B39: CNo incore filen
-    EQUB &61, &6D, &65, &00  \ &8B49: ame.
-.L8B4D
-    JSR L8A0F
-    EQUB &44, &4E, &6F, &20, &42, &41, &53, &49, &43, &20, &70, &72, &6F, &67, &72, &61  \ &8B50: DNo BASIC progra
-    EQUB &6D, &00  \ &8B60: m.
-.L8B62
-    JSR L8A0F
-    EQUB &01, &42, &61, &64, &20, &70, &72, &6F, &67, &72, &61, &6D, &00  \ &8B65: .Bad program.
+.error_no_incore_name
+    JSR copy_inline_to_stack    \ BRK error: "No incore filename"
+    EQUB &43 : EQUS "No incore filename" : EQUB 0
+.error_no_basic
+    JSR copy_inline_to_stack    \ BRK error: "No BASIC program"
+    EQUB &44 : EQUS "No BASIC program" : EQUB 0
+.error_bad_program
+    JSR copy_inline_to_stack    \ BRK error: "Bad program"
+    EQUB &01 : EQUS "Bad program" : EQUB 0
 .L8B72
     INY
     STY &8ad3
@@ -678,7 +815,7 @@ GUARD &C000
     RTS
     EQUB &0D, &50, &72, &6F, &67, &72, &61, &6D, &20, &73, &61, &76, &65, &64, &20, &61  \ &8B7E: .Program saved a
     EQUB &73, &20, &27, &00, &27, &0D, &00  \ &8B8E: s '.'..
-.L8B95
+.cmd_l
     LDX #&a5
     LDY #&8b
     JSR oscli
@@ -798,7 +935,7 @@ GUARD &C000
     LDA #&d1
     STA &020b
     RTS
-.L8D54
+.cmd_keyon
     JSR L8C89
     LDX #&00
 .L8D59
@@ -816,7 +953,7 @@ GUARD &C000
     EQUB &73, &20, &6F, &66, &66, &0D, &00, &0D, &52, &65, &64, &65, &66, &69, &6E, &65  \ &8DA5: s off...Redefine
     EQUB &64, &20, &6B, &65, &79, &73, &20, &6F, &6E, &2C, &20, &61, &6E, &64, &20, &61  \ &8DB5: d keys on, and a
     EQUB &72, &65, &3A, &0D, &0D, &00  \ &8DC5: re:...
-.L8DCB
+.cmd_keyoff
     LDA &8c73
     BEQ L8DE1
     LDA #&00
@@ -900,7 +1037,7 @@ GUARD &C000
     EQUB &4A, &75, &6D, &70, &2F, &66, &69, &72, &65, &20, &3A, &20  \ &8F00: Jump/fire : 
 .L8F0C
     JMP L8DE1
-.L8F0F
+.cmd_kstatus
     LDA &8c73
     BEQ L8F0C
     LDX #&00
@@ -944,7 +1081,7 @@ GUARD &C000
     JMP L8D64
     EQUB &4B, &45, &59, &20, &52, &45, &44, &45, &46, &49, &4E, &45, &52, &0D, &2D, &2D  \ &8F5B: KEY REDEFINER.--
     EQUB &2D, &2D, &2D, &2D, &2D, &2D, &2D, &2D, &2D, &2D, &2D, &0D, &00  \ &8F6B: -----------..
-.L8F78
+.cmd_defkeys
     LDA &8c73
     BEQ L8F8E
     LDA #&00
@@ -1052,7 +1189,7 @@ GUARD &C000
     STY &8a67
     RTS
     EQUB &FF  \ &9032: .
-.L9033
+.cmd_alias
     LDA #&00
     STA &9032
     JSR L901F
@@ -1070,7 +1207,7 @@ GUARD &C000
     BEQ L90B0
     LDY &8a67
     PHY
-    JSR L8A26
+    JSR compare_string
     PLY
     STY &8a67
     BCC L9098
@@ -1142,9 +1279,8 @@ GUARD &C000
     LDA &a9
     CMP #&be
     BCC L90E6
-    JSR L8A0F
-    EQUB &48, &4E, &6F, &20, &72, &6F, &6F, &6D, &20, &66, &6F, &72, &20, &61, &6C, &69  \ &90D3: HNo room for ali
-    EQUB &61, &73, &00  \ &90E3: as.
+    JSR copy_inline_to_stack    \ BRK error: "No room for alias"
+    EQUB &48 : EQUS "No room for alias" : EQUB 0
 .L90E6
     CLC
     LDA &f2
@@ -1200,7 +1336,7 @@ GUARD &C000
     LDY &8a67
     STA (&a8),Y
     RTS
-.L9141
+.cmd_aliases
     LDA #&65
     STA &a8
     LDA #&b1
@@ -1247,11 +1383,9 @@ GUARD &C000
     BEQ L9190
     RTS
 .L9190
-    JSR L8A0F
-    EQUB &48, &53, &79, &6E, &74, &61, &78, &20, &3A, &20, &41, &4C, &49, &41, &53, &20  \ &9193: HSyntax : ALIAS 
-    EQUB &3C, &61, &6C, &69, &61, &73, &20, &6E, &61, &6D, &65, &3E, &20, &3C, &61, &6C  \ &91A3: <alias name> <al
-    EQUB &69, &61, &73, &3E, &00  \ &91B3: ias>.
-.L91B8
+    JSR copy_inline_to_stack    \ BRK error: "Syntax : ALIAS <alias name> <alias>"
+    EQUB &48 : EQUS "Syntax : ALIAS <alias name> <alias>" : EQUB 0
+.check_alias
     LDA #&65
     STA &a8
     LDA #&b1
@@ -1261,7 +1395,7 @@ GUARD &C000
     CMP #&ff
     BEQ L91E6
     PHY
-    JSR L8A26
+    JSR compare_string
     BCS L91EA
     LDY #&ff
 .L91CE
@@ -1377,7 +1511,7 @@ GUARD &C000
     LDA #&15
     JSR osasci
     JMP L91FE
-.L9285
+.cmd_alild
     JSR L901F
     CLC
     TYA
@@ -1413,10 +1547,9 @@ GUARD &C000
     LDY &93a7
     JMP osfind
 .L92C8
-    JSR L8A0F
-    EQUB &D6, &41, &6C, &69, &61, &73, &20, &66, &69, &6C, &65, &20, &6E, &6F, &74, &20  \ &92CB: .Alias file not 
-    EQUB &66, &6F, &75, &6E, &64, &00  \ &92DB: found.
-.L92E1
+    JSR copy_inline_to_stack    \ BRK error: "Alias file not found"
+    EQUB &D6 : EQUS "Alias file not found" : EQUB 0
+.cmd_alisv
     JSR L901F
     CLC
     TYA
@@ -1453,14 +1586,13 @@ GUARD &C000
     LDY &93a7
     JMP osfind
 .L9326
-    JSR L8A0F
-    EQUB &63, &43, &61, &6E, &27, &74, &20, &6F, &70, &65, &6E, &20, &61, &6C, &69, &61  \ &9329: cCan't open alia
-    EQUB &73, &20, &66, &69, &6C, &65, &00  \ &9339: s file.
-.L9340
+    JSR copy_inline_to_stack    \ BRK error: "Can't open alias file"
+    EQUB &63 : EQUS "Can't open alias file" : EQUB 0
+.cmd_aliclr
     LDA #&ff
     STA &b165
     RTS
-.L9346
+.cmd_store
     EQUB &AD, &F4, &00  \ LDA 0x00f4
     ORA #&80
     STA &fe30
@@ -1535,9 +1667,8 @@ GUARD &C000
     BEQ L940B
     JSR L93A8
     BCC L93ED
-    JSR L8A0F
-    EQUB &EB, &49, &6E, &76, &61, &6C, &69, &64, &20, &68, &65, &78, &20, &64, &69, &67  \ &93DA: .Invalid hex dig
-    EQUB &69, &74, &00  \ &93EA: it.
+    JSR copy_inline_to_stack    \ BRK error: "Invalid hex digit"
+    EQUB &EB : EQUS "Invalid hex digit" : EQUB 0
 .L93ED
     ASL &ae
     ROL &af
@@ -1557,7 +1688,7 @@ GUARD &C000
     BNE L93C8
 .L940B
     RTS
-.L940C
+.cmd_mem
     JSR L901F
     CMP #&0d
     BEQ L9420
@@ -1676,7 +1807,7 @@ GUARD &C000
     STA &8217
     LDA &9c75,X
     STA &8218
-    JSR L8216
+    JSR cmd_dispatch
     JMP L9494
 .L9501
     LDA &9c6c
@@ -1851,7 +1982,7 @@ GUARD &C000
     EQUB &8C, &96, &90, &96, &94, &96, &97, &96, &99, &96, &9B, &96, &A2, &96, &A9, &96  \ &96D7: ................
     EQUB &AE, &96, &B3, &96, &B9, &96, &BF, &96, &C2, &96, &C8, &96, &D0, &96, &01, &02  \ &96E7: ................
     EQUB &03, &02, &01, &01, &02, &02, &02, &02, &03, &03, &02, &03, &03, &02  \ &96F7: ..............
-.L9705
+.cmd_dis
     JSR L901F
     CMP #&0d
     BEQ L9711
@@ -2066,13 +2197,12 @@ GUARD &C000
     EQUB &69, &6E, &65, &3A, &20, &20, &20, &20, &20, &20, &00, &0D, &4E, &6F, &77, &20  \ &9899: ine:      ..Now 
     EQUB &73, &70, &61, &63, &69, &6E, &67, &20, &6F, &75, &74, &20, &6C, &69, &6E, &65  \ &98A9: spacing out line
     EQUB &3A, &20, &20, &20, &20, &20, &20, &00  \ &98B9: :      .
-.L98C1
+.cmd_bau
     LDA &0230
     CMP #&0c
     BEQ L98EA
-    JSR L8A0F
-    EQUB &5C, &42, &41, &55, &20, &6D, &75, &73, &74, &20, &62, &65, &20, &63, &61, &6C  \ &98CB: \BAU must be cal
-    EQUB &6C, &65, &64, &20, &66, &72, &6F, &6D, &20, &42, &41, &53, &49, &43, &00  \ &98DB: led from BASIC.
+    JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
+    EQUB &5C : EQUS "BAU must be called from BASIC" : EQUB 0
 .L98EA
     LDX #&00
 .L98EC
@@ -2251,13 +2381,12 @@ GUARD &C000
     LDY #&89
     JMP osbyte
     EQUB &4B, &45, &59, &39, &52, &45, &4E, &2E, &7C, &46, &7C, &4B, &7C, &4D, &0D  \ &9A20: KEY9REN.|F|K|M.
-.L9A2F
+.cmd_space
     LDA &0230
     CMP #&0c
     BEQ L9A55
-    JSR L8A0F
-    EQUB &5C, &4D, &75, &73, &74, &20, &62, &65, &20, &63, &61, &6C, &6C, &65, &64, &20  \ &9A39: \Must be called 
-    EQUB &66, &72, &6F, &6D, &20, &42, &41, &53, &49, &43, &21, &00  \ &9A49: from BASIC!.
+    JSR copy_inline_to_stack    \ BRK error: "Must be called from BASIC!"
+    EQUB &5C : EQUS "Must be called from BASIC!" : EQUB 0
 .L9A55
     LDA &18
     STA &a9
@@ -2505,13 +2634,12 @@ GUARD &C000
     PLA
     STA &a8
     RTS
-.L9C00
+.cmd_lvar
     LDA &0230
     CMP #&0c
     BEQ L9C23
-    JSR L8A0F
-    EQUB &4C, &56, &41, &52, &20, &77, &6F, &72, &6B, &73, &20, &6F, &6E, &6C, &79, &20  \ &9C0A: LVAR works only 
-    EQUB &69, &6E, &20, &42, &41, &53, &49, &43, &00  \ &9C1A: in BASIC.
+    JSR copy_inline_to_stack    \ BRK error: "VAR works only in BASIC"
+    EQUB &4C : EQUS "VAR works only in BASIC" : EQUB 0
 .L9C23
     LDX #&00
 .L9C25
@@ -2769,7 +2897,9 @@ GUARD &C000
     DEC &9eee
     BNE L9EE2
     RTS
-    EQUB &00, &00, &00, &00, &49, &6E, &20, &61, &64, &64, &69, &74, &69, &6F, &6E, &20  \ &9EEC: ....In addition 
+    EQUB &00, &00, &00, &00
+.features_text
+    EQUB &49, &6E, &20, &61, &64, &64, &69, &74, &69, &6F, &6E, &20  \ In addition
     EQUB &74, &6F, &20, &74, &68, &65, &20, &63, &6F, &6D, &6D, &61, &6E, &64, &73, &20  \ &9EFC: to the commands 
     EQUB &73, &68, &6F, &77, &6E, &20, &75, &6E, &64, &65, &72, &20, &2A, &48, &45, &4C  \ &9F0C: shown under *HEL
     EQUB &50, &20, &58, &4D, &4F, &53, &2C, &20, &20, &73, &65, &76, &65, &72, &61, &6C  \ &9F1C: P XMOS,  several
