@@ -26,3 +26,8 @@ ENDMACRO
 MACRO NOOP
     EQUB &00, &00, &00, &00
 ENDMACRO
+
+\ BASIC keyword table entry for LVAR: keyword string, token, flags
+MACRO KW name, token, flags
+    EQUS name : EQUB token, flags
+ENDMACRO
