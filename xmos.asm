@@ -7,6 +7,7 @@
 CPU 1  \ 65C02
 
 INCLUDE "constants.asm"
+INCLUDE "macros.asm"
 
 ORG &8000
 GUARD &C000
@@ -437,46 +438,57 @@ GUARD &C000
 \ ============================================================================
 \ Post-reset handler (service call &27)
 \ ============================================================================
+\ ============================================================================
+\ Post-reset handler (service call &27) — restore XMOS state after BREAK
+\ ============================================================================
 .handle_reset
     PHA
     PHX
     PHY
-    LDA &0df0,X
-    STA &84e0
-    STX &84f6
-    STA &ab
-    STA &020d
+    LDA rom_workspace_table,X   \ Get our ROM's workspace page
+    STA extended_input_code + &0F \ Patch workspace high byte into handler
+    STX extended_input_code + &25 \ Patch ROM slot number into handler
+    STA &AB                     \ Set up workspace pointer high
+    STA &020D                   \ Set OSHWM high byte
     LDA #&00
-    STA &aa
-    STA &020c
-    JSR L9379
+    STA &AA                     \ Workspace pointer low = 0
+    STA &020C                   \ OSHWM low byte = 0
+    JSR L9379                   \ Initialise alias system
     LDA keyon_active
-    BEQ L84AC
+    BEQ reset_skip_keyon
     LDA #&00
     STA keyon_active
-    JSR L8C89
-.L84AC
+    JSR L8C89                   \ Re-enable KEYON if it was active
+.reset_skip_keyon
     LDA xon_flag
-    BEQ L84C1
-    LDA #&04
-    LDX #&01
+    BEQ reset_skip_xon
+    LDA #&04                   \ OSBYTE 4: cursor key status
+    LDX #&01                   \ Enable cursor editing
     LDY #&00
     JSR osbyte
-    LDA #&16
+    LDA #&16                   \ OSBYTE &16: reset function keys?
     LDX #&01
     JSR osbyte
-.L84C1
-    LDY #&00
-.L84C3
-    LDA &84d1,Y
-    STA (&aa),Y
+.reset_skip_xon
+{
+    LDY #&00                   \ Copy extended input handler code to workspace
+.copy_loop
+    LDA extended_input_code,Y
+    STA (&AA),Y
     INY
-    CPY #&d0
-    BNE L84C3
+    CPY #&D0                   \ Copy &D0 (208) bytes
+    BNE copy_loop
+}
     PLY
     PLX
     PLA
     RTS
+\ ============================================================================
+\ Extended input handler code — copied to workspace RAM on reset
+\ This block runs from the ROM's private workspace page, intercepting
+\ keyboard input to provide cursor editing, insert/delete, etc.
+\ ============================================================================
+.extended_input_code
     EQUB &08, &C9, &00, &F0, &04, &28, &4C, &39, &EF, &68, &86, &AE, &84, &AF, &A9, &DB  \ &84D1: .....(L9.h......
     EQUB &85, &AB, &A9, &E0, &85, &AA, &A0, &0F, &B1, &AE, &91, &AA, &88, &10, &F9, &A5  \ &84E1: ................
     EQUB &F4, &8D, &30, &02, &A9, &07, &8D, &30, &FE, &85, &F4, &20, &0C, &85, &08, &AD  \ &84F1: ..0....0... ....
@@ -689,16 +701,7 @@ GUARD &C000
     LDX #LO(osfile_block)
     LDY #HI(osfile_block)
     JSR osfile
-{
-    LDX #&00                    \ Print "Program saved as '"
-.print_loop
-    LDA saved_msg,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE print_loop
-.done
-}
+    STROUT saved_msg
     PLA                         \ Restore BASIC string pointer
     STA &b3
     PLA
@@ -721,16 +724,7 @@ GUARD &C000
     BNE print_name
 .name_done
 }
-{
-    LDX #&00                    \ Print closing quote + newline
-.print_loop
-    LDA saved_msg_end,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE print_loop
-.done
-}
+    STROUT saved_msg_end         \ Print closing quote + newline
     RTS
 
 \ --- OSFILE parameter block (18 bytes, copied from template then modified) ---
@@ -851,14 +845,7 @@ GUARD &C000
     EQUB &00                   \ &8C73: non-zero = KEYON active
     EQUB &41, &02, &49, &69, &4A  \ &8C74: workspace
 .L8C79
-    LDX #&00
-.L8C7B
-    LDA msg_keyon_already,X
-    BEQ L8C86
-    JSR osasci
-    INX
-    BNE L8C7B
-.L8C86
+    STROUT msg_keyon_already
     JMP L8D64
 .L8C89
     LDA keyon_active
@@ -950,13 +937,7 @@ GUARD &C000
     RTS
 .cmd_keyon
     JSR L8C89
-    LDX #&00
-.L8D59
-    LDA msg_keys_redefined,X
-    BEQ L8D64
-    JSR osasci
-    INX
-    BNE L8D59
+    STROUT msg_keys_redefined
 .L8D64
     RTS
 .msg_keys_redefined
@@ -980,16 +961,7 @@ GUARD &C000
     LDA saved_keyv_hi
     STA &020B
 .keyoff_print_msg
-{
-    LDX #&00
-.loop
-    LDA msg_keys_off,X
-    BEQ done
-    JSR osasci
-    INX
-    BNE loop
-.done
-}
+    STROUT msg_keys_off
     JMP L8D64
 
 \ --- Key name lookup table ---
@@ -1076,14 +1048,7 @@ GUARD &C000
 .cmd_kstatus
     LDA keyon_active
     BEQ kstatus_not_active
-    LDX #&00
-.L8F16
-    LDA msg_keys_on,X
-    BEQ L8F21
-    JSR osasci
-    INX
-    BNE L8F16
-.L8F21
+    STROUT msg_keys_on
     LDA #&d0
     STA &aa
     LDA #&8e
@@ -1137,14 +1102,7 @@ GUARD &C000
     CPX #&ff
     BEQ L8F8E
     JSR osnewl
-    LDX #&00
-.L8FA0
-    LDA &8f5b,X
-    BEQ L8FAB
-    JSR osasci
-    INX
-    BNE L8FA0
-.L8FAB
+    STROUT msg_key_redefiner
     JSR osnewl
     LDA #&d0
     STA &aa
@@ -2243,14 +2201,7 @@ GUARD &C000
     JSR copy_inline_to_stack    \ BRK error: "BAU must be called from BASIC"
     EQUS &5C, "BAU must be called from BASIC", 0
 .L98EA
-    LDX #&00
-.L98EC
-    LDA &9889,X
-    BEQ L98F7
-    JSR osasci
-    INX
-    BNE L98EC
-.L98F7
+    STROUT msg_now_splitting
     LDA &18
     STA &a9
     LDA #&00
@@ -2432,13 +2383,7 @@ GUARD &C000
     LDA &18
     STA &a9
     STZ &a8
-    LDX #&00
-.L9A5D
-    LDA &98a4,X
-    BEQ L9A68
-    JSR osasci
-    INX
-    BNE L9A5D
+    STROUT msg_now_spacing
 .L9A68
     JSR L9860
     LDY #&01
