@@ -529,7 +529,7 @@ GUARD &C000
     JMP &EF39
 .L8518
     LDA #&00
-    STA &9DFD
+    STA xi_scroll_count
     LDA #&00
     STA xi_cursor_pos
     STA xi_line_len
@@ -625,9 +625,10 @@ GUARD &C000
     JMP L852F
 .L85CD
     LDA #&00
-    STA &85D8
+    STA xi_insert_mode
     JSR L85D9
     JMP L852F
+.xi_insert_mode
     EQUB &00                   \ &85D8: insert mode flag (0=insert, FF=overwrite)
 .L85D9
     SEC
@@ -762,14 +763,14 @@ GUARD &C000
     LDY #&03
 .L86BD
     LDA (&a8),Y
-    CMP &8700,Y
+    CMP save_keyword,Y
     BNE L86DD
     DEY
     BPL L86BD
     JSR osnewl
     LDA &0230
     PHA
-    JSR &8A68
+    JSR cmd_s
     LDA #&0d
     EQUB &92, &A8  \ STA (&a8)
     LDY #&00
@@ -789,7 +790,7 @@ GUARD &C000
     DEX
     BNE L86E7
 .L86EF
-    JSR &9D88
+    JSR L9D88
     LDY xi_cursor_pos
     LDA #&0d
     STA (&a8),Y
@@ -851,7 +852,7 @@ GUARD &C000
     BEQ L875D
     JMP L852F
 .L875D
-    JSR &846C
+    JSR cmd_xoff
     JSR osnewl
     LDY #&00
     LDA #&0d
@@ -865,19 +866,19 @@ GUARD &C000
     JSR osbyte
     CPX #&ff
     BNE L8795
-    LDA &9DFD
+    LDA xi_scroll_count
     BNE L878F
-    LDA &85D8
+    LDA xi_insert_mode
     BNE L878F
     LDA #&ff
-    STA &85D8
+    STA xi_insert_mode
     LDA xi_cursor_pos
     BEQ L8792
-    JSR &9D88
+    JSR L9D88
 .L878F
-    INC &9DFD
+    INC xi_scroll_count
 .L8792
-    JMP &9DFE
+    JMP L9DFE
 .L8795
     LDA xi_cursor_pos
     BNE L879F
@@ -917,16 +918,16 @@ GUARD &C000
     JSR osbyte
     CPX #&ff
     BNE L87FA
-    LDA &9DFD
+    LDA xi_scroll_count
     BNE L87F4
-    LDA &85D8
+    LDA xi_insert_mode
     BNE L87F4
     LDA #&ff
-    STA &85D8
-    JSR &9D88
+    STA xi_insert_mode
+    JSR L9D88
 .L87F4
-    DEC &9DFD
-    JMP &9DFE
+    DEC xi_scroll_count
+    JMP L9DFE
 .L87FA
     LDA xi_cursor_pos
     BNE L8804
@@ -1118,7 +1119,7 @@ GUARD &C000
     SBC #&04
     TAX
     LDA #&00
-    STA &89AE
+    STA xi_quote_toggle
     LDA &001F
     AND #&01
     BEQ L8973
@@ -1136,9 +1137,9 @@ GUARD &C000
     BCS L89AF
     CMP #&22
     BNE L898A
-    LDA &89AE
+    LDA xi_quote_toggle
     EOR #&ff
-    STA &89AE
+    STA xi_quote_toggle
 .L898A
     JSR L85D9
 .L898D
@@ -1160,9 +1161,10 @@ GUARD &C000
     LDA #&07
     JSR oswrch
     JMP L852F
+.xi_quote_toggle
     EQUB &00                   \ &89AE: quote toggle flag
 .L89AF
-    EQUB &AD, &AE, &89         \ LDA &89AE (absolute ZP workaround)
+    EQUB &AD, &AE, &89         \ LDA xi_quote_toggle (absolute ZP workaround)
     BNE L898A
     LDA #&55
     STA &AE
@@ -1869,10 +1871,11 @@ GUARD &C000
     BEQ L9023
     STY &8a67
     RTS
+.alias_semicolon_flag
     EQUB &FF  \ &9032: .
 .cmd_alias
     LDA #&00
-    STA &9032
+    STA alias_semicolon_flag
     JSR L901F
     CMP #&0d
     BNE L9042
@@ -1893,7 +1896,7 @@ GUARD &C000
     STY &8a67
     BCC L9098
     LDA #&ff
-    STA &9032
+    STA alias_semicolon_flag
     LDY #&ff
 .L9064
     INY
@@ -2060,7 +2063,7 @@ GUARD &C000
 .L9186
     LDA #&ff
     EQUB &92, &A8  \ STA (0xa8)
-    LDA &9032
+    LDA alias_semicolon_flag
     BEQ L9190
     RTS
 .L9190
@@ -2485,9 +2488,9 @@ GUARD &C000
     ASL A
     TAX
     LDA &9c74,X
-    STA &8217
+    STA cmd_dispatch_addr + 1
     LDA &9c75,X
-    STA &8218
+    STA cmd_dispatch_addr + 2
     JSR cmd_dispatch
     JMP L9494
 .L9501
@@ -2509,10 +2512,10 @@ GUARD &C000
     STA &ff
     RTS
 .L952B
-    DEC &9C6E
+    DEC mem_column
     EQUB &10, &12  \ BPL &9542
     LDA #&07
-    STA &9C6E
+    STA mem_column
     SEC
     LDA &A8
     SBC #&08
@@ -2593,7 +2596,7 @@ GUARD &C000
     RTS
 .L95BC
     LDA #&16
-    STA &9649
+    STA dis_temp
     LDA #&51
     STA &ac
     LDA #&7c
@@ -2654,7 +2657,7 @@ GUARD &C000
     BCC L9624
     INC &af
 .L9624
-    DEC &9649
+    DEC dis_temp
     BNE L95C9
     LDY #&00
     TYA
@@ -2674,6 +2677,7 @@ GUARD &C000
     LDA #&5b
     STA &7de9,Y
     RTS
+.dis_temp
     EQUB &00  \ &9649: .
 .L964A
     STA &965e
@@ -3446,7 +3450,9 @@ GUARD &C000
 .mem_workspace
     EQUB &00, &00, &00         \ Workspace variables
     EQUB &12, &E3, &16         \ VDU codes: text window? mode?
-    EQUB &01, &03, &02         \ Colour settings
+    EQUB &01, &03              \ Colour settings
+.mem_column
+    EQUB &02                   \ MEM column counter (0-7)
     EQUB &88, &89, &8A, &8B   \ Key codes: left, right, down, up
     EQUB &09                   \ TAB key
     EQUW L952B                 \ Address of cursor-up routine
@@ -3590,29 +3596,30 @@ GUARD &C000
     JMP L9CB7
 .L9D85
     JMP L9A78
+.L9D88
     LDA #&54
     STA &AC
     LDA #&ae
     STA &AD
-    INC &A155
-    LDA &A155
+    INC xi_alias_count
+    LDA xi_alias_count
     BNE L9D9D
     LDA #&ff
-    STA &A155
+    STA xi_alias_count
 .L9D9D
-    INC &8480
+    INC xi_cursor_pos
     SEC
     LDA &AC
-    SBC &8480
+    SBC xi_cursor_pos
     STA &AE
     LDA &AD
     SBC #&00
     STA &AF
-    DEC &8480
+    DEC xi_cursor_pos
     LDA #&0d
-    STA &AE53
+    STA alias_end_lo
     LDA #&ff
-    STA &AE54
+    STA alias_end_hi
 .L9DBB
     EQUB &B2, &AE  \ LDA (&ae)
     EQUB &92, &AC  \ STA (&ac)
@@ -3636,59 +3643,60 @@ GUARD &C000
     LDA &AF
     CMP #&aa
     BNE L9DBB
-    LDY &8480
+    LDY xi_cursor_pos
     BEQ L9DF7
     LDY #&00
 .L9DEC
     LDA (&a8),Y
     STA &aa55,Y
     INY
-    CPY &8480
+    CPY xi_cursor_pos
     BNE L9DEC
 .L9DF7
     LDA #&0d
-    STA &AA55,Y
+    STA alias_buffer,Y
     RTS
+.xi_scroll_count
     EQUB &A6                   \ &9DFD: scroll counter variable
 .L9DFE
     LDA #&0D
-    STA &AE54
-    LDA &9DFD
+    STA alias_end_hi
+    LDA xi_scroll_count
     CMP #&FF
     BNE L9E0F
     LDA #&00
-    STA &9DFD
+    STA xi_scroll_count
 .L9E0F
-    CMP &A155
+    CMP xi_alias_count
     BCC L9E1B
-    LDA &A155
+    LDA xi_alias_count
     DEC A
-    STA &9DFD
+    STA xi_scroll_count
 .L9E1B
     LDA #&55
     STA &AE
     LDA #&aa
     STA &AF
-    LDX &9DFD
+    LDX xi_scroll_count
     BNE L9E4A
 .L9E28
-    JSR &872A
+    JSR L872A
     EQUB &B2, &AE  \ LDA (&ae)
     CMP #&0d
     BNE L9E34
-    JMP &852F
+    JMP L852F
 .L9E34
     LDY #&ff
 .L9E36
     INY
     LDA (&ae),Y
-    STA &8482
+    STA xi_char
     CMP #&0d
     BNE L9E43
-    JMP &852F
+    JMP L852F
 .L9E43
     PHY
-    JSR &85D9
+    JSR L85D9
     PLY
     BRA L9E36
 .L9E4A
@@ -3700,7 +3708,7 @@ GUARD &C000
     INY
     BNE L9E4C
     LDA #&00
-    STA &9DFD
+    STA xi_scroll_count
     JMP L9DFE
 .L9E5D
     INY
@@ -3719,7 +3727,7 @@ GUARD &C000
     CMP #&55
     BCC L9E4A
     LDA #&00
-    STA &9DFD
+    STA xi_scroll_count
     JMP L9DFE
 .L9E7F
     CMP #&45
@@ -3802,7 +3810,9 @@ GUARD &C000
     EQUB 0
 
 \ Remaining ROM data
-    EQUB &00, &FF, &42, &52, &4B, &05, &4F, &52, &41, &06, &00, &00, &00, &00, &00, &00
+    EQUB &00
+.xi_alias_count
+    EQUB &FF, &42, &52, &4B, &05, &4F, &52, &41, &06, &00, &00, &00, &00, &00, &00
     EQUB &00, &00, &54, &53, &42, &03, &4F, &52, &41, &03, &41, &53, &4C, &03, &00, &00
     EQUB &00, &00, &50, &48, &50, &05, &4F, &52, &41, &01, &41, &53, &4C, &04, &00, &00
     EQUB &00, &00, &54, &53, &42, &02, &4F, &52, &41, &02, &41, &53, &4C, &02, &00, &00

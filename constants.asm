@@ -54,3 +54,9 @@ rom_number  = &F4              \ Current paged ROM number
 zp_ptr_lo = &A8                \ General pointer low byte
 zp_ptr_hi = &A9                \ General pointer high byte
 
+\ --- Alias workspace (in sideways RAM) ---
+\ TODO: these should become labels once the data region is fully annotated
+alias_buffer   = &AA55         \ Start of alias string buffer in sideways RAM
+alias_end_lo   = &AE53         \ Alias buffer end marker low
+alias_end_hi   = &AE54         \ Alias buffer end marker high
+
