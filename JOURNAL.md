@@ -195,8 +195,9 @@ All code blocks are now disassembled into proper 6502 instructions:
 
 ### Remaining work
 - [ ] **More scoping**: ~260 more labels could be scoped (mostly single-reference branch targets)
-- [ ] **Tail data annotation**: opcode table, keyword tables could be structured further
+- [ ] **Tail data annotation**: key/alias buffer regions could be labelled further
 - [ ] **Comment pass**: add high-level comments explaining each routine's purpose
+- [ ] **Instruction compaction**: put simple instruction pairs on one line with `:` separator (e.g. `ASL A : ROL A : ASL A : ROL A`, `LDA #&00 : STA &xx`) — see frogman source for style
 - [ ] **ZP workarounds**: 23 &00xx absolute addressing EQUB instructions (fix in improvements phase)
 - [ ] **Second macro pass**: find more repeated patterns after full annotation
 

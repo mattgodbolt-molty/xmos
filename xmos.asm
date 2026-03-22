@@ -60,9 +60,7 @@ GUARD &C000
 \ *HELP handler (service call &09)
 \ ============================================================================
 .handle_help
-    PHA
-    PHX
-    PHY
+    PHA : PHX : PHY
     LDX #&00
 {
 .print_loop
@@ -75,9 +73,7 @@ GUARD &C000
     INX
     BNE print_loop
 .done
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 }
 .help_title_text
@@ -94,26 +90,20 @@ GUARD &C000
 \ *HELP with an argument — check for "XMOS", "FEATURES", or a command name
 .help_has_argument
     PHY
-    LDA #LO(xmos_keyword)
-    STA zp_ptr_lo
-    LDA #HI(xmos_keyword)
-    STA zp_ptr_hi
+    LDA #LO(xmos_keyword) : STA zp_ptr_lo
+    LDA #HI(xmos_keyword) : STA zp_ptr_hi
     JSR compare_string          \ Compare argument against "XMOS"
     BCC help_try_features
     PLY
     \ Matched "XMOS" — print all commands from the command table
-    LDA #LO(command_table)
-    STA zp_ptr_lo
-    LDA #HI(command_table)
-    STA zp_ptr_hi
+    LDA #LO(command_table) : STA zp_ptr_lo
+    LDA #HI(command_table) : STA zp_ptr_hi
     JSR print_inline
     EQUB &0D
     EQUS "MOS Extension commands:"
     EQUB &0E, &0D, 0           \ &0E = mode 1 (double height?)
-    LDA #LO(command_table)
-    STA zp_ptr_lo
-    LDA #HI(command_table)
-    STA zp_ptr_hi
+    LDA #LO(command_table) : STA zp_ptr_lo
+    LDA #HI(command_table) : STA zp_ptr_hi
 .help_print_loop
     LDY #&00
     EQUB &B2, &A8              \ LDA (zp_ptr_lo) — 65C02 (zp) indirect
@@ -134,8 +124,7 @@ GUARD &C000
     TYA                         \ Pad with spaces to column 11
     SEC                         \ (9 - name_length spaces)
     SBC #&09
-    EOR #&FF
-    INC A
+    EOR #&FF : INC A             \ negate
     TAX
 {
 .pad_loop
@@ -168,26 +157,20 @@ GUARD &C000
     STA zp_ptr_hi
     JMP help_print_loop
 .help_done
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 \ Check if *HELP FEATURES
 .help_try_features
-    LDA #LO(features_keyword)
-    STA zp_ptr_lo
-    LDA #HI(features_keyword)
-    STA zp_ptr_hi
+    LDA #LO(features_keyword) : STA zp_ptr_lo
+    LDA #HI(features_keyword) : STA zp_ptr_hi
     PLY
     PHY
     JSR compare_string
     BCC help_try_command
     PLY
     \ Matched "FEATURES" — print features text
-    LDA #LO(features_text)
-    STA zp_ptr_lo
-    LDA #HI(features_text)
-    STA zp_ptr_hi
+    LDA #LO(features_text) : STA zp_ptr_lo
+    LDA #HI(features_text) : STA zp_ptr_hi
     LDY #&00
 {
 .print_loop
@@ -201,18 +184,14 @@ GUARD &C000
 .done
 }
     JSR osnewl
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 
 \ Check if *HELP <command name> — try each command in table
 .help_try_command
     PLY
-    LDA #LO(command_table)
-    STA zp_ptr_lo
-    LDA #HI(command_table)
-    STA zp_ptr_hi
+    LDA #LO(command_table) : STA zp_ptr_lo
+    LDA #HI(command_table) : STA zp_ptr_hi
 .help_try_next_cmd
     PHY
     JSR compare_string
@@ -245,9 +224,7 @@ GUARD &C000
     BNE help_try_next_cmd
     LDA #&0F                   \ Print mode 0 (reset double height)
     JSR osasci
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 
 \ Matched a specific command — print its help entry
@@ -268,8 +245,7 @@ GUARD &C000
     TYA                         \ Pad with spaces to column 11
     SEC
     SBC #&09
-    EOR #&FF
-    INC A
+    EOR #&FF : INC A             \ negate
     TAX
 {
 .pad_loop
@@ -291,18 +267,14 @@ GUARD &C000
 .done
 }
     JSR osnewl
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 
 \ ============================================================================
 \ * command handler (service call &04) — dispatch unrecognised commands
 \ ============================================================================
 .handle_command
-    PHA
-    PHX
-    PHY
+    PHA : PHX : PHY
     LDA #LO(command_table)
     STA &a8
     LDA #HI(command_table)
@@ -359,9 +331,7 @@ GUARD &C000
     LDA (&a8),Y                \ Load handler address high byte
     STA cmd_dispatch_addr + 2
     JSR cmd_dispatch
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     LDA #&00                   \ Claim the service call
     RTS
 

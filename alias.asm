@@ -225,9 +225,7 @@
     PLY
     JMP alias_walk_check
 .alias_cmd_done
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 .alias_exec_entry
     PLY
@@ -311,9 +309,7 @@
     LDX #&00
     LDY #&89
     JSR osbyte
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     LDA #&00
     RTS
 .alisv_write_header

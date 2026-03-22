@@ -1,9 +1,7 @@
 \ input.asm — Extended input system: handle_reset, XON handler, keyboard intercept
 
 .handle_reset
-    PHA
-    PHX
-    PHY
+    PHA : PHX : PHY
     LDA rom_workspace_table,X   \ Get our ROM's workspace page
     STA extended_input_code + &0F \ Patch workspace high byte into handler
     STX extended_input_code + &25 \ Patch ROM slot number into handler
@@ -38,9 +36,7 @@
     CPY #&D0                   \ Copy &D0 (208) bytes
     BNE copy_loop
 }
-    PLY
-    PLX
-    PLA
+    PLY : PLX : PLA
     RTS
 \ ============================================================================
 \ Extended input handler code — copied to workspace RAM on reset

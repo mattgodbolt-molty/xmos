@@ -224,9 +224,7 @@
 .space_check_token
     CMP #&8d
     BNE space_check_else
-    INY
-    INY
-    INY
+    INY : INY : INY             \ skip 3-byte token
     BNE space_scan_loop
 .space_check_else
     CMP #&a7
