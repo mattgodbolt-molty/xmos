@@ -66,22 +66,23 @@ format. Produces no output if no aliases are defined.
 
 ### Key Redefinition
 
-Remaps cursor keys and a fire button to different physical keys,
-primarily for games. Instead of using the cursor keys as a joystick,
-you can map Left/Right/Up/Down/Fire to a more comfortable cluster
-of keys on the keyboard.
+Replaces the cursor keys and COPY key with different physical keys.
+When active, pressing the remapped key (e.g. CAPS LOCK) acts as if
+you pressed the corresponding cursor key (e.g. cursor-left). The
+original cursor keys stop working. This is useful for games that use
+cursor keys for movement — you can remap them to keys in a more
+comfortable position.
 
 **`*DEFKEYS`** — Enter interactive mode to choose which physical key
-maps to each of the five directions (Left, Right, Up, Down,
-Jump/Fire). Follow the on-screen prompts to press the desired key
-for each.
+maps to each of the five labels. Follow the on-screen prompts to
+press the desired key for each.
 
-**`*KEYON`** — Activate the remapped keys by intercepting the
-keyboard vector (KEYV). Prints `Keys now redefined`. If already
-active, prints `'KEYON' already executed!`.
+**`*KEYON`** — Activate the remapped keys. Prints
+`Keys now redefined`. If already active, prints
+`'KEYON' already executed!`.
 
-**`*KEYOFF`** — Deactivate the remapping and restore normal cursor
-keys. Prints `Redefined keys off`.
+**`*KEYOFF`** — Deactivate the remapping and restore normal keyboard
+behaviour. Prints `Redefined keys off`.
 
 **`*KSTATUS`** — Show whether remapping is active and the current
 key assignments:
@@ -94,8 +95,6 @@ Redefined keys on, and are:
      Down : /
 Jump/fire : RETURN
 ```
-
-The defaults are CAPS LOCK, CTRL, :, / and RETURN.
 
 ### BASIC Utilities
 
