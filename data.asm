@@ -296,58 +296,22 @@
     OP "SBC", &0a               \ &fd: SBC &hl,X
     OP "INC", &0a               \ &fe: INC &hl,X
     NOOP                        \ &ff
-\\  ============================================================================
-\\ Build artifacts — remnants of the original development environment
-\\ These are old *KEY definitions, BASIC build scripts, and ghost code
-\\ left in sideways RAM from previous builds. Not executed at runtime.
-\\  ============================================================================
-\\ Original build *KEY9 definition
-.build_key9
-    EQUB &4b, &45, &59, &39, &20, &2a, &53, &52, &53, &41, &56, &45, &20, &58, &4d, &6f
-    EQUB &73, &20, &38, &30, &30, &30, &2b, &34, &30, &30, &30, &20, &37, &51, &7c, &4d
-    EQUB &0d, &4d, &0d
+\ Build *KEY9 definition from original development
+    EQUS "KEY9 *SRSAVE XMos 8000+4000 7Q|M", 13, "M", 13
 
-\\ Overwritten workspace (asterisks, quotes, high-bit padding)
-.build_fill
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a
-    EQUB &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &2a, &22, &22, &22, &22
-    EQUB &22, &22, &22, &22, &22, &22, &22, &22, &22, &22, &22, &22, &22
+\ Overwritten workspace
+    FOR n, 1, 220 : EQUB '*' : NEXT
+    FOR n, 1, 17 : EQUB '"' : NEXT
+    FOR n, 1, 17 : EQUB &80 : NEXT
 
-\\ BASIC build scripts (CH. commands, PAGE setup)
-.build_scripts
-    EQUB &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80, &80
-    EQUB &80, &69, &8a, &90, &7e, &7a, &a9, &19, &69, &74, &22, &0d, &26, &8a, &90, &7e
-    EQUB &7a, &a9, &19, &6f, &61, &64, &65, &72, &22, &0d, &43, &48, &2e, &22, &4d, &65
-    EQUB &64, &69, &74, &22, &0d, &26, &8a, &90, &7e, &7a, &a9, &19, &61, &64, &65, &72
-    EQUB &22, &0d, &43, &48, &2e, &22, &4d, &65, &64, &69, &74, &22, &0d, &26, &8a, &90
-    EQUB &7e, &7a, &a9, &19, &50, &41, &47, &45, &3d, &26, &32, &38, &30, &30, &0d, &4c
-    EQUB &4f, &2e, &22, &53, &72, &63, &43, &6f, &64, &65, &22, &0d, &43, &48, &2e, &22
-    EQUB &4d, &61, &6b, &65, &4d, &61, &70, &22, &0d, &43, &48, &2e, &22, &4c, &6f, &61
-    EQUB &64, &65, &72, &22, &0d, &43, &48, &2e, &22, &4d, &65, &64, &69, &74, &22, &0d
-    EQUB &26, &8a, &90, &7e, &7a, &a9, &19, &61, &6b, &65, &4d, &61, &70, &22, &0d, &43
-    EQUB &48, &2e, &22, &4c, &6f, &61, &64, &65, &72, &22, &0d, &43, &48, &2e, &22, &4d
-    EQUB &65, &64, &69, &74, &22, &0d, &26, &a9, &82, &85, &a9, &a0, &00, &b2, &a8, &c9
-    EQUB &ff, &f0, &43, &a9, &20, &20, &e3, &ff, &20, &e3, &ff, &b1, &a8, &f0, &06, &20
-    EQUB &e3, &ff, &c8, &d0, &f6, &98, &38, &e9, &09, &49, &ff, &1a, &aa, &a9, &20, &20
-    EQUB &e3, &ff, &ca, &d0, &f8, &c8, &c8, &c8, &88, &c8, &b1, &a8, &f0, &05, &20, &00
-    EQUB &00, &00, &00, &00, &00, &00, &c8, &18, &98, &65, &a8, &85, &a8, &a5, &a9, &69
-    EQUB &00, &85, &a9, &4c, &cc, &80, &7a, &fa, &68, &60, &a9, &86, &85, &a8, &a9, &80
-    EQUB &85, &a9
+\ BASIC build scripts and fragments from the development environment
+    EQUS "i", &8a, &90, "~z", &a9, &19, "it", '"', 13, "&", &8a, &90, "~z", &a9, &19, "oader", '"', 13, "CH.", '"', "Medit", '"', 13, "&", &8a, &90, "~z", &a9, &19, "ader", '"', 13, "CH.", '"', "Medit", '"', 13
+    EQUS "&", &8a, &90, "~z", &a9, &19, "PAGE=&2800", 13, "LO.", '"', "SrcCode", '"', 13, "CH.", '"', "MakeMap", '"', 13, "CH.", '"', "Loader", '"', 13, "CH.", '"'
+    EQUS "Medit", '"', 13, "&", &8a, &90, "~z", &a9, &19, "akeMap", '"', 13, "CH.", '"', "Loader", '"', 13, "CH.", '"', "Medit", '"', 13, "&", &a9, &82, &85, &a9, &a0, 0, &b2, &a8, &c9, &ff, &f0, "C", &a9, " "
+    EQUS " ", &e3, &ff, " ", &e3, &ff, &b1, &a8, &f0, &06, " ", &e3, &ff, &c8, &d0, &f6, &98, "8", &e9, &09, "I", &ff, &1a, &aa, &a9, "  ", &e3, &ff, &ca, &d0, &f8, &c8, &c8, &c8, &88, &c8, &b1, &a8, &f0, &05, " ", 0, 0, 0, 0, 0, 0, 0, &c8, &18, &98, "e", &a8, &85, &a8, &a5, &a9, "i", 0
+    EQUS &85, &a9, "L", &cc, &80, "z", &fa, "h`", &a9, &86, &85, &a8, &a9, &80, &85, &a9
 
-\\ Ghost code — old help handler from a previous build (dead code)
-.ghost_help_handler
+\ Ghost code — old help/command handler from a previous build (not executed)
     EQUB &7a, &5a, &20, &26, &8a, &90, &20, &7a, &a9, &f0, &85, &a8, &a9, &9e, &85, &a9
     EQUB &a0, &00, &b1, &a8, &f0, &0a, &20, &e3, &ff, &c8, &d0, &f6, &e6, &a9, &80, &f2
     EQUB &20, &e7, &ff, &7a, &fa, &68, &60, &7a, &a9, &19, &85, &a8, &a9, &82, &85, &a9
@@ -364,105 +328,28 @@
     EQUB &c9, &81, &7a, &4c, &b8, &91, &7a, &a0, &00, &c8, &b1, &a8, &d0, &00, &00, &00
     EQUB &00, &00, &00, &82, &c8, &b1, &a8, &8d, &18, &82, &20, &16, &82, &7a, &fa, &68
 
-\\ Ghost command table — previous version left in sideways RAM
-.ghost_command_table
-    EQUB &a9, &00, &60, &4c, &46, &93, &41, &4c, &49, &41, &53, &00, &33, &90, &3c, &61
-    EQUB &6c, &69, &61, &73, &20, &6e, &61, &6d, &65, &3e, &20, &3c, &61, &6c, &69, &61
-    EQUB &73, &3e, &00, &41, &4c, &49, &41, &53, &45, &53, &00, &41, &91, &53, &68, &6f
-    EQUB &77, &73, &20, &61, &63, &74, &69, &76, &65, &20, &61, &6c, &69, &61, &73, &65
-    EQUB &73, &00, &41, &4c, &49, &43, &4c, &52, &00, &40, &93, &43, &6c, &65, &61, &72
-    EQUB &73, &20, &61, &6c, &6c, &20, &61, &6c, &69, &61, &73, &65, &73, &00, &41, &4c
-    EQUB &49, &4c, &44, &00, &85, &92, &4c, &6f, &61, &64, &73, &20, &61, &6c, &69, &61
-    EQUB &73, &20, &66, &69, &6c, &65, &00, &41, &4c, &49, &53, &56, &00, &e1, &92, &53
-    EQUB &61, &76, &65, &73, &20, &61, &6c, &69, &61, &73, &20, &66, &69, &6c, &65, &00
-    EQUB &42, &41, &55, &00, &c1, &98, &53, &70, &6c, &69, &74, &73, &20, &74, &6f, &20
-    EQUB &73, &69, &6e, &67, &6c, &65, &20, &63, &6f, &6d, &6d, &61, &6e, &64, &73, &00
-    EQUB &44, &45, &46, &4b, &45, &59, &53, &00, &78, &8f, &44, &65, &66, &69, &6e, &65
-    EQUB &73, &20, &6e, &65, &77, &20, &6b, &65, &79, &73, &00, &44, &49, &53, &00, &05
-    EQUB &97, &3c, &61, &64, &64, &72, &3e, &20, &2d, &20, &64, &69, &73, &61, &73, &73
-    EQUB &65, &6d, &62, &6c, &65, &20, &6d, &65, &6d, &6f, &72, &79, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00, &00
-    EQUB &00, &00, &00, &00, &00, &63, &6f, &72, &65, &20, &6e, &61, &6d, &65, &00, &53
-    EQUB &50, &41, &43, &45, &00, &2f, &9a, &49, &6e, &73, &65, &72, &74, &73, &20, &73
-    EQUB &70, &61, &63, &65, &73, &20, &69, &6e, &74, &6f, &20, &70, &72, &6f, &67, &72
-    EQUB &61, &6d, &73, &00, &53, &54, &4f, &52, &45, &00, &46, &93, &4b
+\ Ghost command table — previous version of command_table left in RAM
+    EQUS &a9, 0, "`LF", &93, "ALIAS", 0, "3", &90, "<alias name> <alias>", 0, "ALIASES", 0, "A", &91, "Shows active al"
+    EQUS "iases", 0, "ALICLR", 0, "@", &93, "Clears all aliases", 0, "ALILD", 0, &85, &92, "Loads alias file", 0, "A"
+    EQUS "LISV", 0, &e1, &92, "Saves alias file", 0, "BAU", 0, &c1, &98, "Splits to single commands", 0, "DEFK"
+    EQUS "EYS", 0, "x", &8f, "Defines new keys", 0, "DIS", 0, &05, &97, "<addr> - disassemble memory", 0, 0, 0, 0
+    EQUS 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    EQUS 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    EQUS 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    EQUS 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "core name", 0, "SPACE", 0, "/", &9a, "Inserts spaces into progr"
+    EQUS "ams", 0, "STORE", 0, "F", &93, "K"
 
-\\ Key definition and alias buffer workspace (initialised with &0d = empty)
-.key_alias_buffer
+\ Key/alias buffer workspace
 .alias_buffer
-    EQUB &2a, &53, &52, &53, &41, &56, &45, &20, &58, &4d, &4f, &53, &20, &38, &30, &30, &30, &2b, &34, &30, &30, &30, &20, &37, &20, &51, &0d
+    EQUS "*SRSAVE XMOS 8000+4000 7 Q", 13
     FOR n, 1, 685 : EQUB &0d : NEXT
 
-\\ Stored *KEY function key definitions
-.stored_key_defs
-    EQUS "*KEYOFF"
-    EQUB &0d
-    EQUS "*KEYOF"
-    EQUB &0d
-    EQUS "*STORE"
-    EQUB &0d
-    EQUS "*H.XMOS"
-    EQUB &0d, &0d
-    EQUS "*KEY 15"
-    EQUB &0d
-    EQUS "*KEY 1"
-    EQUB &0d
-    EQUS "*KEY 16"
-    EQUB &0d
-    EQUS "*KEY 14"
-    EQUB &0d
-    EQUS "*KEY 13"
-    EQUB &0d
-    EQUS "*KEY 12"
-    EQUB &0d
-    EQUS "*KEY 11"
-    EQUB &0d
-    EQUS "*KEY 10"
-    EQUB &0d
-    EQUS "*KEY 9"
-    EQUB &0d
-    EQUS "*KEY 8"
-    EQUB &0d
-    EQUS "*KEY 7"
-    EQUB &0d
-    EQUS "*KEY 6"
-    EQUB &0d
-    EQUS "*KEY 5"
-    EQUB &0d
-    EQUS "*KEY 4"
-    EQUB &0d
-    EQUS "*KEY 3"
-    EQUB &0d
-    EQUS "*KEY 2"
-    EQUB &0d
-    EQUS "*KEY 1"
-    EQUB &0d
-    EQUS "*KEY 0"
-    EQUB &0d
-    EQUB &4f, &53, &43, &4c, &49, &22, &53, &61, &76, &65, &20, &47, &61, &6d, &65, &20
-    EQUB &31, &31, &30, &30, &20, &22, &2b, &53, &54, &52, &24, &7e, &50, &25, &2b, &22
-    EQUB &20, &22, &2b, &53, &54, &52, &24, &7e, &73, &74, &61, &72, &74
-    EQUB &0d
-    EQUS "*SHOW 10"
-    EQUB &0d
-    EQUS "*SHOW"
-    EQUB &0d
-    EQUS "*H.MOS"
-    EQUB &0d
-    EQUS "*KEYS"
-    EQUB &0d
-    EQUS "*KEY"
+\ Stored function key definitions
+    EQUS "*KEYOFF", 13, "*KEYOF", 13, "*STORE", 13, "*H.XMOS", 13, 13, "*KEY 15", 13, "*KEY 1", 13, "*KEY 16", 13, "*KEY 1"
+    EQUS "4", 13, "*KEY 13", 13, "*KEY 12", 13, "*KEY 11", 13, "*KEY 10", 13, "*KEY 9", 13, "*KEY 8", 13, "*KEY 7", 13, "*KEY "
+    EQUS "6", 13, "*KEY 5", 13, "*KEY 4", 13, "*KEY 3", 13, "*KEY 2", 13, "*KEY 1", 13, "*KEY 0", 13, "OSCLI", '"', "Save Game "
+    EQUS "1100 ", '"', "+STR$~P%+", '"', " ", '"', "+STR$~start", 13, "*SHOW 10", 13, "*SHOW", 13, "*H.MOS", 13, "*KEYS", 13, "*K"
+    EQUS "EY"
     FOR n, 1, 70 : EQUB &0d : NEXT
 
 .basic_keyword_table
@@ -596,25 +483,13 @@
     KW "HIMEM", &d3, &00
     KW "Missing", &ff, &4f
 
-\ Build-time *KEY definitions — stored by *STORE during the original build
-.build_key_defs
-    EQUB &00, &16               \ KEY def: SAVE|MCH."Core"|M
-    EQUS "SAVE|MCH.", &22, "Core", &22, "|M"
-    EQUB &0d
-    EQUS "BREAK", &00, &1e     \ KEY def: *KEY10 %0||M|M*STORE|M
-    EQUS "*KEY10 %0||M|M*STORE|M"
-    EQUB &0d
-    EQUS "MAKE", &00, &1f      \ KEY def: *SSAVE %0|MCH."CREATE"|M
-    EQUS "*SSAVE %0|MCH.", &22, "CREATE", &22, "|M"
-    EQUB &0d
-    EQUS "SPR", &00, &34       \ KEY def: MODE1:VDU palette setup
-    EQUS "MODE1:VDU19,1,1;0;19,2,2;0;19,3,3;0;:*SED.%0|M"
-    EQUB &0d
-    EQUS "UPDATE", &00, &24    \ KEY def: *SRSAVE XMos
-    EQUS "*SRSAVE XMos 8000+4000 7Q|M"
-    EQUB &0d, &ff
-    EQUS "ETUPTE", &00, &24    \ KEY def: *SRSAVE XMos (duplicate/fragment)
-    EQUS "*SRSAVE XMos 8000+4000 7Q|M"
+\ Build-time *KEY definitions stored after the keyword table
+    EQUS 0, &16, "SAVE|MCH.", '"', "Core", '"', "|M", 13
+    EQUS "BREAK", 0, &1e, "*KEY10 %0||M|M*STORE|M", 13
+    EQUS "MAKE", 0, &1f, "*SSAVE %0|MCH.", '"', "CREATE", '"', "|M", 13
+    EQUS "SPR", 0, &34, "MODE1:VDU19,1,1;0;19,2,2;0;19,3,3;0;:*SED.%0|M", 13
+    EQUS "UPDATE", 0, &24, "*SRSAVE XMos 8000+4000 7Q|M", 13
+    EQUS &ff, "ETUPTE", 0, &24, "*SRSAVE XMos 8000+4000 7Q|M"
 \ ============================================================================
 \ Uninitialised sideways RAM — alternating &ff/&00 blocks
 \ This is the unused portion of the 16KB ROM slot. The alternating
