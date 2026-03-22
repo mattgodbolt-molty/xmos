@@ -96,7 +96,7 @@
     CPY #&04                    \ nothing to split if colon is first char
     BEQ bau_skip_token
     LDA #&0d
-    STA (zp_ptr_lo),Y          \ terminate current line at split point
+    STA (zp_ptr_lo),Y           \ terminate current line at split point
     TYA
     PHA
     SEC
@@ -155,12 +155,12 @@
 \ Write the new line header: line number 0, then stored length
     LDA #&00
     LDY #&01
-    STA (zp_ptr_lo),Y          \ line number hi = 0
+    STA (zp_ptr_lo),Y           \ line number hi = 0
     INY
-    STA (zp_ptr_lo),Y          \ line number lo = 0
+    STA (zp_ptr_lo),Y           \ line number lo = 0
     LDA &ae
     INY
-    STA (zp_ptr_lo),Y          \ line length
+    STA (zp_ptr_lo),Y           \ line length
     CLC
     LDA &00
     ADC #&03
@@ -344,7 +344,7 @@
     STA &01
     LDA #' '
     INY
-    STA (zp_ptr_lo),Y          \ write space byte
+    STA (zp_ptr_lo),Y           \ write space byte
     DEY
 \ Check if this token is an infix keyword that also needs a space BEFORE it.
 \ These are: TAB, AND, DIV, ELSE, EOR, MOD, OR, THEN, LINE

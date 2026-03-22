@@ -179,7 +179,7 @@
     CMP #' '
     BEQ lvar_print_char         \ already has a space, just continue
     DEY
-    JSR space_shift_up           \ insert a space byte before this position
+    JSR space_shift_up          \ insert a space byte before this position
     PHY
     LDY #&03
     LDA (zp_ptr_lo),Y

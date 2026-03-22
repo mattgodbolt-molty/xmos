@@ -11,10 +11,10 @@
     STA zp_ptr_hi
     LDY #&00
 .print_loop
-        INY
-        LDA (zp_ptr_lo),Y
-        JSR osasci
-        BNE print_loop
+    INY
+    LDA (zp_ptr_lo),Y
+    JSR osasci
+    BNE print_loop
     CLC                         \ Adjust return address past the string
     TYA
     ADC zp_ptr_lo
@@ -40,10 +40,10 @@
     TAY
     STA &0100,Y                 \ Store null at start of stack page
 .copy_loop
-        INY
-        LDA (zp_ptr_lo),Y       \ Copy bytes to stack page
-        STA &0100,Y
-        BNE copy_loop
+    INY
+    LDA (zp_ptr_lo),Y           \ Copy bytes to stack page
+    STA &0100,Y
+    BNE copy_loop
     JMP &0100                   \ Execute the copied code
 \ ============================================================================
 \ compare_string — Case-insensitive match of the command line against a
@@ -54,13 +54,13 @@
 \ ============================================================================
 .compare_string
 {
-    LDX #&00
-    LDA &a8                     \ Self-modify the CMP and LDA absolute,X below
-    STA cmp_str_addr + 1
-    STA lda_str_addr + 1
-    LDA zp_ptr_hi
-    STA cmp_str_addr + 2
-    STA lda_str_addr + 2
+        LDX #&00
+        LDA &a8                 \ Self-modify the CMP and LDA absolute,X below
+        STA cmp_str_addr + 1
+        STA lda_str_addr + 1
+        LDA zp_ptr_hi
+        STA cmp_str_addr + 2
+        STA lda_str_addr + 2
 .loop
         LDA (cmd_line_lo),Y     \ Get next character from command line
         CMP #'.'
@@ -91,8 +91,8 @@
         INY
         BNE loop
 .no_match
-    CLC                         \ C=0: no match
-    RTS
+        CLC                     \ C=0: no match
+        RTS
 }
 .compare_string_y
     EQUB &07                    \ Saved Y position after last match
