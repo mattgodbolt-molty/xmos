@@ -39,4 +39,16 @@ describe("*ALIAS / *ALIASES / *ALICLR", () => {
         const output = await runCommand(machine, "*LS");
         expect(output).toContain("*CAT");
     });
+
+    it("*ALIAS with no arguments should show syntax error", async () => {
+        const machine = await bootWithXmos();
+        const output = await runCommand(machine, "*ALIAS");
+        expect(output).toContain("Syntax : ALIAS <alias name> <alias>");
+    });
+
+    it("*ALIAS with only a name and no expansion should show syntax error", async () => {
+        const machine = await bootWithXmos();
+        const output = await runCommand(machine, "*ALIAS FOO");
+        expect(output).toContain("Syntax : ALIAS <alias name> <alias>");
+    });
 });
