@@ -51,8 +51,14 @@ rom_number  = &F4              \ Current paged ROM number
 
 \ --- XMOS workspace (zero page, temporary for * commands) ---
 \ &A8-&AF are reserved by MOS for sideways ROM use during commands
-zp_ptr_lo = &A8                \ General pointer low byte
-zp_ptr_hi = &A9                \ General pointer high byte
+zp_ptr_lo  = &A8               \ General pointer low
+zp_ptr_hi  = &A9               \ General pointer high
+zp_work_lo = &AA               \ Workspace pointer low
+zp_work_hi = &AB               \ Workspace pointer high
+zp_tmp_lo  = &AC               \ Temporary pointer low
+zp_tmp_hi  = &AD               \ Temporary pointer high
+zp_src_lo  = &AE               \ Source pointer low
+zp_src_hi  = &AF               \ Source pointer high
 
 
 

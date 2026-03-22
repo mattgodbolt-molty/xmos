@@ -5,10 +5,10 @@
     LDA rom_workspace_table,X   \ Get our ROM's workspace page
     STA extended_input_code + &0F \ Patch workspace high byte into handler
     STX extended_input_code + &25 \ Patch ROM slot number into handler
-    STA &AB                     \ Set up workspace pointer high
+    STA zp_work_hi                     \ Set up workspace pointer high
     STA os_himem_hi                   \ Set OSHWM high byte
     LDA #&00
-    STA &AA                     \ Workspace pointer low = 0
+    STA zp_work_lo                     \ Workspace pointer low = 0
     STA os_himem_lo                   \ OSHWM low byte = 0
     JSR alias_init                   \ Initialise alias system
     LDA keyon_active
@@ -31,7 +31,7 @@
     LDY #&00                   \ Copy extended input handler code to workspace
 .copy_loop
     LDA extended_input_code,Y
-    STA (&AA),Y
+    STA (zp_work_lo),Y
     INY
     CPY #&D0                   \ Copy &D0 (208) bytes
     BNE copy_loop
@@ -51,36 +51,36 @@
     JMP default_keyv
 .xi_entry
     PLA
-    STX &00AE
-    STY &00AF
+    STX zp_src_lo
+    STY zp_src_hi
     LDA #&db
-    STA &00AB
+    STA zp_work_hi
     LDA #&e0
-    STA &00AA
+    STA zp_work_lo
     LDY #&0f
 .xi_save_regs_loop
-    LDA (&ae),Y
-    STA (&aa),Y
+    LDA (zp_src_lo),Y
+    STA (zp_work_lo),Y
     DEY
     BPL xi_save_regs_loop
-    LDA &00F4
+    LDA rom_number
     STA os_mode
     LDA #&07
     STA sheila_romsel
-    STA &00F4
+    STA rom_number
     JSR xi_check_xon
     PHP
     LDA os_mode
     STA sheila_romsel
-    STA &00F4
+    STA rom_number
     LDA #&00
     PLP
     RTS
 .xi_check_xon
     LDA xon_flag
     BNE xi_init_state
-    LDX &00AE
-    LDY &00AF
+    LDX zp_src_lo
+    LDY zp_src_hi
     JMP default_keyv
 .xi_init_state
     LDA #&00
@@ -89,11 +89,11 @@
     STA xi_cursor_pos
     STA xi_line_len
     TAY
-    LDA (&aa),Y
-    STA &00A8
+    LDA (zp_work_lo),Y
+    STA zp_ptr_lo
     INY
-    LDA (&aa),Y
-    STA &00A9
+    LDA (zp_work_lo),Y
+    STA zp_ptr_hi
 .xi_read_loop
     JSR osrdch
     STA xi_char
@@ -165,19 +165,19 @@
     JMP xi_read_loop
 .xi_check_lo_range
     LDY #&03
-    CMP (&aa),Y
+    CMP (zp_work_lo),Y
     BCS xi_check_hi_range
     JMP xi_read_loop
 .xi_check_hi_range
     INY
-    CMP (&aa),Y
+    CMP (zp_work_lo),Y
     BEQ xi_check_buffer_full
     BCC xi_check_buffer_full
     JMP xi_read_loop
 .xi_check_buffer_full
     LDA xi_cursor_pos
     LDY #&02
-    CMP (&aa),Y
+    CMP (zp_work_lo),Y
     BNE xi_do_insert_setup
     JMP xi_read_loop
 .xi_do_insert_setup
@@ -197,9 +197,9 @@
     LDY xi_cursor_pos
     DEY
 .xi_shift_right_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     INY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     DEY
     DEY
     DEX
@@ -208,7 +208,7 @@
     LDY xi_line_len
     LDA xi_char
     JSR oswrch
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     INC xi_line_len
     INC xi_cursor_pos
     PLA
@@ -217,7 +217,7 @@
     TAX
 .xi_redraw_after
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     JSR oswrch
     DEX
     BNE xi_redraw_after
@@ -273,9 +273,9 @@
     TAX
     LDY xi_line_len
 .shift_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     DEY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     INY
     INY
     DEX
@@ -291,12 +291,12 @@
     PHA
     TAX
 .redraw_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     JSR oswrch
     INY
     DEX
     BNE redraw_loop
-    LDA #&20
+    LDA #' '
     JSR oswrch
     PLA
     TAX
@@ -325,7 +325,7 @@
     BNE xi_cr_normal
     LDY #&03
 .xi_cr_check_save
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP save_keyword,Y
     BNE xi_cr_normal
     DEY
@@ -335,7 +335,7 @@
     PHA
     JSR cmd_s
     LDA #&0d
-    EQUB &92, &A8  \ STA (&a8)
+    STA (zp_ptr_lo)
     LDY #&00
     PLA
     STA os_mode
@@ -356,7 +356,7 @@
     JSR xi_support_entry
     LDY xi_cursor_pos
     LDA #&0d
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     JSR osnewl
     CLC
     LDX #&00
@@ -421,7 +421,7 @@
     JSR osnewl
     LDY #&00
     LDA #&0d
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     CLC
     RTS
 .xi_handle_copy_up
@@ -552,9 +552,9 @@
     LDY xi_line_len
     INY
 .xi_tab_shift_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     DEY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     INY
     INY
     DEX
@@ -569,12 +569,12 @@
     BEQ xi_tab_single
     PHA
 .xi_tab_redraw_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     JSR oswrch
     INY
     DEX
     BNE xi_tab_redraw_loop
-    LDA #&20
+    LDA #' '
     JSR oswrch
     PLA
     TAX
@@ -615,7 +615,7 @@
     STY xi_char
     STY xi_temp
 .xi_htab_parse_loop
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&30
     BCC xi_htab_skip_nondigit
     CMP #&3a
@@ -631,20 +631,20 @@
     ROL xi_temp
     LDA xi_char
     ASL A
-    STA &00AC
+    STA zp_tmp_lo
     LDA xi_temp
     ROL A
-    STA &00AD
-    ASL &00AC
-    ROL &00AD
+    STA zp_tmp_hi
+    ASL zp_tmp_lo
+    ROL zp_tmp_hi
     CLC
     LDA xi_char
-    ADC &00AC
+    ADC zp_tmp_lo
     STA xi_char
-    LDA &00AD
+    LDA zp_tmp_hi
     ADC xi_temp
     STA xi_temp
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     SEC
     SBC #&30
     CLC
@@ -654,7 +654,7 @@
     ADC #&00
     STA xi_temp
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&30
     BCC xi_htab_lookup
     CMP #&3a
@@ -664,38 +664,38 @@
 .xi_htab_lookup
     LDY xi_cursor_pos
     LDA #&00
-    STA &00AC
-    LDA &0018
-    STA &00AD
+    STA zp_tmp_lo
+    LDA basic_page_hi
+    STA zp_tmp_hi
 .xi_htab_search_loop
     LDY #&01
-    LDA (&ac),Y
+    LDA (zp_tmp_lo),Y
     CMP #&ff
     BEQ xi_htab_not_found
     CMP xi_temp
     BNE xi_htab_advance_ptr
     INY
-    LDA (&ac),Y
+    LDA (zp_tmp_lo),Y
     CMP xi_char
     BNE xi_htab_advance_ptr
     INY
-    LDA (&ac),Y
+    LDA (zp_tmp_lo),Y
     SEC
     SBC #&04
     TAX
     LDA #&00
     STA xi_quote_toggle
-    LDA &001F
+    LDA basic_flags
     AND #&01
     BEQ xi_htab_found_space
     PHY
-    LDA #&20
+    LDA #' '
     STA xi_char
     JSR xi_do_insert
     PLY
 .xi_htab_found_space
     INY
-    LDA (&ac),Y
+    LDA (zp_tmp_lo),Y
     PHY
     STA xi_char
     CMP #&80
@@ -714,13 +714,13 @@
     JMP xi_read_loop
 .xi_htab_advance_ptr
     LDY #&03
-    LDA (&ac),Y
+    LDA (zp_tmp_lo),Y
     CLC
-    ADC &00AC
-    STA &00AC
-    LDA &00AD
+    ADC zp_tmp_lo
+    STA zp_tmp_lo
+    LDA zp_tmp_hi
     ADC #&00
-    STA &00AD
+    STA zp_tmp_hi
     JMP xi_htab_search_loop
 .xi_htab_not_found
     LDA #&07
@@ -732,22 +732,22 @@
     EQUB &AD, &AE, &89         \ LDA xi_quote_toggle (absolute ZP workaround)
     BNE xi_htab_output_char
     LDA #&55
-    STA &AE
+    STA zp_src_lo
     LDA #&AE
-    STA &AF
+    STA zp_src_hi
 .xi_htab_keyword_loop
     LDY #&00
-    LDA (&ae),Y
+    LDA (zp_src_lo),Y
 .xi_htab_kw_scan
     INY
-    LDA (&ae),Y
+    LDA (zp_src_lo),Y
     BPL xi_htab_kw_scan
     CMP xi_char
     BNE xi_htab_kw_advance
     LDY #&ff
 .xi_htab_kw_match
     INY
-    LDA (&ae),Y
+    LDA (zp_src_lo),Y
     BMI xi_htab_kw_done
     STA xi_char
     PHY
@@ -761,11 +761,11 @@
     INY
     TYA
     CLC
-    ADC &00AE
-    STA &00AE
-    LDA &00AF
+    ADC zp_src_lo
+    STA zp_src_lo
+    LDA zp_src_hi
     ADC #&00
-    STA &00AF
+    STA zp_src_hi
     JMP xi_htab_keyword_loop
 \ ============================================================================
 \ print_inline — Print null-terminated string that follows the JSR
