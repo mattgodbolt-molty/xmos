@@ -247,3 +247,84 @@ All are legitimate and cannot be converted:
 - 26 `{ }` scoped blocks with clean local names
 - 46 legitimate absolute addresses remaining
 - Assembly byte-identical: `check.sh` passes at every commit
+
+## 2026-03-22: Automated testing with jsbeeb
+
+### Setup
+Using jsbeeb's `TestMachine` class (from npm) with vitest to run XMOS
+commands in a headless BBC Master emulator. The test helper boots a
+Master, loads the disc, `*SRLOAD`s the ROM into SWRAM slot 7, and hard
+resets to activate it.
+
+### Key discoveries
+
+**Hard reset required for ROM recognition**: A soft reset (BREAK) does
+NOT re-scan sideways ROM slots on the BBC Master. Only a hard reset
+(CTRL+BREAK) triggers the MOS to page through all slots, read the type
+byte at &8006, and rebuild the ROM type table at &2A1. This is real
+hardware behaviour, not a jsbeeb quirk.
+
+**SWRAM survives reset**: Sideways RAM contents persist across both
+soft and hard resets in jsbeeb (and on real hardware). The `ramRomOs`
+array is only zeroed below `romOffset` (main RAM), not in the ROM
+area. The `*ROMS` command (from the SRAM utility in ROM slot 8) can
+read SWRAM contents at any time, even when the MOS type table shows
+the slot as empty.
+
+**Disc cleared by hard reset**: `fdc.powerOnReset()` is called during
+hard reset, which clears the loaded disc image. Tests that need disc
+access must re-load the disc after the hard reset.
+
+**Text capture timing**: `TestMachine.type()` runs the CPU to process
+keypresses, and the MOS may begin producing output during that
+execution. Capture hooks must be installed *before* `type()` to avoid
+missing the first few characters.
+
+**Paged output**: The MOS pauses long output with "Shift for more".
+Tests hold SHIFT during `runFor()` to prevent this.
+
+**Alias expansion**: XMOS aliases type the expanded text at the
+prompt without pressing RETURN. `*ALIAS LS *CAT` followed by `*LS`
+produces `>*CAT` with the cursor waiting — the user can edit or
+press RETURN to execute. This is the intended behaviour (confirmed
+on real hardware). The test verifies the expanded text appears.
+
+**captureText() limitations**: TestMachine's `captureText()` installs
+a VDU state machine per call. Calling it multiple times on the same
+machine causes independent state machines to desync on control codes,
+silently dropping output. The test helper uses a simpler raw WRCHV
+hook that just collects printable characters. A TestMachine
+improvement to support reusable capture would be cleaner.
+
+**CAPS LOCK and case handling**: TestMachine's `_charToKey()` always
+sends uppercase keycodes with `shift: false`. With CAPS LOCK on (boot
+default), every letter is uppercase and lowercase is impossible. This
+caused `total` to become `TOTAL` which BBC BASIC tokenises as `TO`+
+`TAL`. Fix: toggle CAPS LOCK off after boot and use a `typeText()`
+wrapper that sets `shift: true` for uppercase letters.
+
+### Test results
+30 tests across 7 files, all passing:
+- `help.test.js` — full command listing, general help, features text, dot-abbreviation
+- `xon-xoff.test.js` — TAB line recall with XON, XOFF disabling, KEYON/KEYOFF/KSTATUS
+- `alias.test.js` — define/list/clear, multiple aliases, expansion typing
+- `save.test.js` — *S save with incore filename, leading spaces
+- `dis.test.js` — disassemble known addresses, multi-line scroll
+- `lvar.test.js` — empty list, heap vs integer variables
+- `bau.test.js` — *BAU line splitting, *SPACE keyword spacing
+
+### CI and pre-commit
+- `npm test` runs as a pre-commit hook alongside beebasm-fmt and check.sh
+- GitHub Actions CI runs both `check.sh` (ROM verification) and `npm test`
+
+### jsbeeb TestMachine improvements to propose
+- **`type()` cannot produce lowercase**: workaround is CAPS LOCK off
+  + `typeText()` wrapper. Proper fix: `type()` should handle case.
+- **`keyDown()`/`keyUp()` methods**: currently have to reach through
+  `processor.sysvia.keyDown(keyCode)` with raw key codes.
+- **Reusable capture API**: `captureText()` installs a new VDU state
+  machine per call. Multiple hooks desync on control codes.
+- **`snapshotState()`/`restoreState()` including SWRAM**: currently
+  only saves main RAM. Including ROM area would speed up tests.
+- **`loadSidewaysRam(slot, data)`**: convenience method to avoid the
+  *SRLOAD dance.
