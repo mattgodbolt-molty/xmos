@@ -23,28 +23,22 @@ GUARD &C000
     EQUB &01                    \ Version number
     EQUS "MOS Extension"       \ ROM title
 .copyright_ptr
-    EQUB 0                     \ Title terminator / copyright pointer target
-    EQUS "(C) RTW and MG 1992" \ Copyright string
-    EQUB 0                     \ Copyright terminator
+    EQUS 0, "(C) RTW and MG 1992", 0
 
 \ ============================================================================
 \ Service entry — dispatches on service call number in A
 \ ============================================================================
 .service_entry
     CMP #svc_command
-{
     BNE not_command
     JMP handle_command
 .not_command
-}
     CMP #svc_help
     BEQ handle_help
     CMP #svc_post_reset
-{
     BNE not_reset
     JMP handle_reset
 .not_reset
-}
     CMP #svc_claim_static
     BEQ handle_claim_static
     RTS
@@ -59,12 +53,12 @@ GUARD &C000
 \ ============================================================================
 \ *HELP handler (service call &09)
 \ ============================================================================
-.handle_help
+{
+.*handle_help
     PHA : PHX : PHY
     LDX #&00
-{
 .print_loop
-    LDA (&f2),Y                 \ Check if bare *HELP (CR = end of line)
+    LDA (cmd_line_lo),Y                 \ Check if bare *HELP (CR = end of line)
     CMP #&0D
     BNE help_has_argument
     LDA help_title_text,X       \ Print help title string
@@ -75,18 +69,10 @@ GUARD &C000
 .done
     PLY : PLX : PLA
     RTS
-}
 .help_title_text
-    EQUB &0D
-    EQUS "MOS Extension"
-    EQUB &0D
-    EQUS "  XMOS"
-    EQUB &0D
-    EQUS "  FEATURES"
-    EQUB &0D, 0
+    EQUS 13, "MOS Extension", 13, "  XMOS", 13, "  FEATURES", 13, 0
 .features_keyword
-    EQUS "FEATURES"
-    EQUB 0
+    EQUS "FEATURES", 0
 \ *HELP with an argument — check for "XMOS", "FEATURES", or a command name
 .help_has_argument
     PHY
@@ -99,20 +85,15 @@ GUARD &C000
     LDA #LO(command_table) : STA zp_ptr_lo
     LDA #HI(command_table) : STA zp_ptr_hi
     JSR print_inline
-    EQUB &0D
-    EQUS "MOS Extension commands:"
-    EQUB &0E, &0D, 0           \ &0E = mode 1 (double height?)
+    EQUS 13, "MOS Extension commands:", &0E, 13, 0
     LDA #LO(command_table) : STA zp_ptr_lo
     LDA #HI(command_table) : STA zp_ptr_hi
 .help_print_loop
     LDY #&00
-    EQUB &B2, &A8              \ LDA (zp_ptr_lo) — 65C02 (zp) indirect
+    LDA (zp_ptr_lo)
     CMP #&FF                   \ End of table marker?
     BEQ help_done
-    LDA #&20                   \ Print two spaces indent
-    JSR osasci
-    JSR osasci
-{
+    LDA #' ' : JSR osasci : JSR osasci  \ two space indent
 .print_name                     \ Print command name
     LDA (zp_ptr_lo),Y
     BEQ name_done
@@ -120,24 +101,17 @@ GUARD &C000
     INY
     BNE print_name
 .name_done
-}
     TYA                         \ Pad with spaces to column 11
     SEC                         \ (9 - name_length spaces)
     SBC #&09
     EOR #&FF : INC A             \ negate
     TAX
-{
 .pad_loop
-    LDA #&20
-    JSR osasci
+    LDA #' ' : JSR osasci
     DEX
     BNE pad_loop
-}
-    INY                         \ Skip null terminator
-    INY                         \ Skip 2-byte handler address
-    INY
-    DEY                         \ Back up one (INY at start of loop)
-{
+    INY : INY : INY             \ skip null + handler address
+    DEY                         \ back up (print_help starts with INY)
 .print_help                     \ Print help text
     INY
     LDA (zp_ptr_lo),Y
@@ -145,7 +119,6 @@ GUARD &C000
     JSR osasci
     BRA print_help
 .help_text_done
-}
     JSR osnewl
     INY                         \ Advance pointer past this entry
     CLC
@@ -172,17 +145,15 @@ GUARD &C000
     LDA #LO(features_text) : STA zp_ptr_lo
     LDA #HI(features_text) : STA zp_ptr_hi
     LDY #&00
-{
-.print_loop
+.print_loop_2
     LDA (zp_ptr_lo),Y
-    BEQ done
+    BEQ done_2
     JSR osasci
     INY
-    BNE print_loop
+    BNE print_loop_2
     INC zp_ptr_hi
-    BRA print_loop
-.done
-}
+    BRA print_loop_2
+.done_2
     JSR osnewl
     PLY : PLX : PLA
     RTS
@@ -196,20 +167,16 @@ GUARD &C000
     PHY
     JSR compare_string
     BCS help_print_single_cmd
-{
     LDY #&00
 .skip_name                      \ Skip past command name
     INY
     LDA (zp_ptr_lo),Y
     BNE skip_name
-    INY                         \ Skip null
-    INY                         \ Skip 2-byte handler address
-    INY
+    INY : INY : INY             \ skip null + handler address
 .skip_help                      \ Skip past help text
     INY
     LDA (zp_ptr_lo),Y
     BNE skip_help
-}
     INY                         \ Advance pointer to next entry
     CLC
     TYA
@@ -219,7 +186,7 @@ GUARD &C000
     ADC #&00
     STA zp_ptr_hi
     PLY
-    EQUB &B2, &A8              \ LDA (zp_ptr_lo) — 65C02 (zp) indirect
+    LDA (zp_ptr_lo)
     CMP #&FF                   \ End of table?
     BNE help_try_next_cmd
     LDA #&0F                   \ Print mode 0 (reset double height)
@@ -230,50 +197,42 @@ GUARD &C000
 \ Matched a specific command — print its help entry
 .help_print_single_cmd
     PLY
-    LDA #&20                   \ Two space indent
-    JSR osasci
-    JSR osasci
+    LDA #' ' : JSR osasci : JSR osasci
     LDY #&FF
-{
-.print_name                     \ Print command name
+.print_name_2                     \ Print command name
     INY
     LDA (zp_ptr_lo),Y
     JSR osasci
     CMP #&00
-    BNE print_name
-}
+    BNE print_name_2
     TYA                         \ Pad with spaces to column 11
     SEC
     SBC #&09
     EOR #&FF : INC A             \ negate
     TAX
-{
-.pad_loop
-    LDA #&20
-    JSR osasci
+.pad_loop_2
+    LDA #' ' : JSR osasci
     DEX
-    BNE pad_loop
-}
-    INY                         \ Skip handler address (2 bytes)
-    INY
-    INY
-{
+    BNE pad_loop_2
+    INY : INY : INY             \ skip handler address + offset
 .print_help_text                \ Print the help description
     LDA (&a8),Y
-    BEQ done
+    BEQ done_3
     JSR osasci
     INY
     BNE print_help_text
-.done
-}
+.done_3
     JSR osnewl
     PLY : PLX : PLA
     RTS
 
 \ ============================================================================
 \ * command handler (service call &04) — dispatch unrecognised commands
+}
+
 \ ============================================================================
-.handle_command
+{
+.*handle_command
     PHA : PHX : PHY
     LDA #LO(command_table)
     STA &a8
@@ -281,25 +240,21 @@ GUARD &C000
     STA &a9
 .cmd_try_next
     PHY
-    EQUB &B2, &A8              \ LDA (&A8) — 65C02 (zp) indirect
+    LDA (&a8)
     CMP #&FF                   \ End of command table?
     BEQ cmd_not_found
     JSR compare_string
     BCS cmd_found
-{
     LDY #&00
-.skip_name                      \ Skip command name
+.skip_name_2                      \ Skip command name
     INY
     LDA (&a8),Y
-    BNE skip_name
-    INY                         \ Skip null terminator
-    INY                         \ Skip handler address low byte
-    INY                         \ Skip handler address high byte
+    BNE skip_name_2
+    INY : INY : INY             \ skip null + handler address
 .skip_help                      \ Skip help text
     INY
     LDA (&a8),Y
     BNE skip_help
-}
     INY                         \ Advance past help text null terminator
     TYA
     CLC
@@ -318,12 +273,10 @@ GUARD &C000
 .cmd_found
     PLY
     LDY #&00
-{
-.skip_name                      \ Skip past command name to handler address
+.skip_cmd_name                      \ Skip past command name to handler address
     INY
     LDA (&a8),Y
-    BNE skip_name
-}
+    BNE skip_cmd_name
     INY
     LDA (&a8),Y                \ Load handler address low byte
     STA cmd_dispatch_addr + 1
@@ -335,6 +288,7 @@ GUARD &C000
     LDA #&00                   \ Claim the service call
     RTS
 
+}
 .cmd_dispatch
 .cmd_dispatch_addr
     JMP cmd_keyoff                  \ Self-modified: handler address written here
@@ -365,8 +319,7 @@ GUARD &C000
     EQUS "XOFF", 0     : EQUW cmd_xoff     : EQUS "Disables extended input", 0
     EQUB &FF                  \ End of command table
 .xmos_keyword
-    EQUS "XMOS"
-    EQUB 0
+    EQUS "XMOS", 0
 \ ============================================================================
 \ *XON — Enable extended input
 \ ============================================================================
