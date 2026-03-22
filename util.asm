@@ -2,25 +2,25 @@
 
 .print_inline
     PLA                         \ Pull return address (points to string - 1)
-    STA &a8
+    STA zp_ptr_lo
     PLA
-    STA &a9
+    STA zp_ptr_hi
     LDY #&00
 {
 .loop
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     JSR osasci
     BNE loop
 }
     CLC                         \ Adjust return address past the string
     TYA
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
     PHA                         \ Push adjusted return address
-    LDA &a8
+    LDA zp_ptr_lo
     PHA
     RTS                         \ "Return" to instruction after the string
 
@@ -30,16 +30,16 @@
 \ ============================================================================
 .copy_inline_to_stack
     PLA                         \ Pull return address (points to code - 1)
-    STA &a8
+    STA zp_ptr_lo
     PLA
-    STA &a9
+    STA zp_ptr_hi
     LDA #&00
     TAY
     STA &0100,Y                \ Store null at start of stack page
 {
 .loop
     INY
-    LDA (&a8),Y                \ Copy bytes to stack page
+    LDA (zp_ptr_lo),Y                \ Copy bytes to stack page
     STA &0100,Y
     BNE loop
 }
@@ -56,19 +56,19 @@
     LDA &a8                     \ Self-modify the CMP and LDA absolute,X below
     STA cmp_str_addr + 1
     STA lda_str_addr + 1
-    LDA &a9
+    LDA zp_ptr_hi
     STA cmp_str_addr + 2
     STA lda_str_addr + 2
 {
 .loop
-    LDA (&f2),Y                 \ Get next character from command line
-    CMP #&2E                   \ '.' = abbreviation marker
+    LDA (cmd_line_lo),Y                 \ Get next character from command line
+    CMP #'.'
     BEQ matched
-    CMP #&61                   \ Convert lowercase to uppercase
+    CMP #'a'                   \ Convert lowercase to uppercase
     BCC no_convert
-    CMP #&7B
+    CMP #'{'
     BCS no_convert
-    AND #&DF                   \ Clear bit 5 = uppercase
+    AND #&df                   \ Clear bit 5 = uppercase
 .no_convert
 .*cmp_str_addr
     CMP &831F,X                \ Compare against string (self-modified address)
@@ -76,10 +76,10 @@
 .*lda_str_addr
     LDA &831F,X                \ Check if we reached end of keyword (null)
     BNE no_match
-    LDA (&f2),Y                \ At end of keyword: check command line terminator
-    CMP #&0D                   \ CR = end of line
+    LDA (cmd_line_lo),Y                \ At end of keyword: check command line terminator
+    CMP #&0d
     BEQ matched
-    CMP #&20                   \ Space = argument separator
+    CMP #' '
     BNE no_match
 .matched
     STY compare_string_y       \ Save Y position after match

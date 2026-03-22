@@ -9,47 +9,47 @@
 .bau_splitting
     STROUT msg_now_splitting
     LDA &18
-    STA &a9
+    STA zp_ptr_hi
     LDA #&00
-    STA &a8
+    STA zp_ptr_lo
 .bau_line_loop
     JSR print_backspace
 .bau_check_line
     LDY #&01
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&ff
     BNE bau_get_length
     JMP space_start
 .bau_get_length
     LDY #&04
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     STA os_rs423_buf
     DEY
     CMP #&2e
     BNE bau_skip_token
 .bau_scan_loop
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&0d
     BNE bau_check_colon
     JMP bau_next_line
 .bau_check_colon
-    CMP #&3a
+    CMP #':'
     BEQ bau_split_here
-    CMP #&20
+    CMP #' '
     BNE bau_scan_loop
 .bau_scan_char
     INY
-    LDA (&a8),Y
-    CMP #&20
+    LDA (zp_ptr_lo),Y
+    CMP #' '
     BEQ bau_scan_char
     DEY
 .bau_split_here
     JMP bau_check_end
 .bau_skip_token
     INY
-    LDA (&a8),Y
-    CMP #&3a
+    LDA (zp_ptr_lo),Y
+    CMP #':'
     BEQ bau_check_end
     CMP #&0d
     BNE bau_check_then
@@ -75,7 +75,7 @@
     BNE bau_skip_token
 .bau_skip_string
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&22
     BEQ bau_skip_token
     CMP #&0d
@@ -85,7 +85,7 @@
     CPY #&04
     BEQ bau_skip_token
     LDA #&0d
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     TYA
     PHA
     SEC
@@ -96,57 +96,57 @@
     ADC #&04
     STA &ae
     PLA
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     CLC
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     LDA &00
     CLC
     ADC #&02
-    STA &ac
+    STA zp_tmp_lo
     LDA &01
     ADC #&00
-    STA &ad
+    STA zp_tmp_hi
     SEC
     LDA &00
     SBC #&01
-    STA &aa
+    STA zp_work_lo
     LDA &01
     SBC #&00
-    STA &ab
+    STA zp_work_hi
 .bau_copy_byte
     EQUB &B2, &AA  \ LDA (0xaa)
     EQUB &92, &AC  \ STA (0xac)
     SEC
-    LDA &ac
+    LDA zp_tmp_lo
     SBC #&01
-    STA &ac
-    LDA &ad
+    STA zp_tmp_lo
+    LDA zp_tmp_hi
     SBC #&00
-    STA &ad
+    STA zp_tmp_hi
     SEC
-    LDA &aa
+    LDA zp_work_lo
     SBC #&01
-    STA &aa
-    LDA &ab
+    STA zp_work_lo
+    LDA zp_work_hi
     SBC #&00
-    STA &ab
+    STA zp_work_hi
     CMP &a9
     BNE bau_copy_byte
-    LDA &aa
+    LDA zp_work_lo
     CMP &a8
     BNE bau_copy_byte
     LDA #&00
     LDY #&01
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     INY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     LDA &ae
     INY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     CLC
     LDA &00
     ADC #&03
@@ -157,13 +157,13 @@
     JMP bau_check_line
 .bau_next_line
     LDY #&03
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CLC
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     JMP bau_line_loop
 .space_start
     JSR osnewl
@@ -187,13 +187,13 @@
     EQUS &5C, "Must be called from BASIC!", 0
 .space_setup
     LDA &18
-    STA &a9
+    STA zp_ptr_hi
     STZ &a8
     STROUT msg_now_spacing
 .space_line_loop
     JSR print_backspace
     LDY #&01
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&ff
     BNE space_scan_start
     JMP space_save_top
@@ -201,7 +201,7 @@
     LDY #&03
 .space_scan_loop
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     BMI space_check_token
     CMP #&0d
     BNE space_check_bracket
@@ -215,7 +215,7 @@
     BNE space_scan_loop
 .space_skip_string
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&22
     BEQ space_scan_loop
     CMP #&0d
@@ -260,7 +260,7 @@
     CMP #&b8
     BNE space_check_lomem
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&50
     BEQ space_scan_loop
     DEY
@@ -269,7 +269,7 @@
     CMP #&b3
     BNE space_check_rem
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&28
     BNE space_insert_lomem
     JMP space_scan_loop
@@ -282,9 +282,9 @@
     JMP space_next_line
 .space_insert_space
     INY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     DEY
-    CMP #&20
+    CMP #' '
     BNE space_check_cr
     JMP space_scan_loop
 .space_check_cr
@@ -292,16 +292,16 @@
     BNE space_check_colon
     JMP space_scan_loop
 .space_check_colon
-    CMP #&3a
+    CMP #':'
     BNE space_do_insert
     JMP space_scan_loop
 .space_do_insert
     JSR space_shift_up
     PHY
     LDY #&03
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     INC A
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     PLY
     CLC
     LDA &00
@@ -312,9 +312,9 @@
     STA &01
     LDA #&20
     INY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     DEY
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CMP #&b8
     BEQ space_insert_byte
     CMP #&80
@@ -337,13 +337,13 @@
     JMP space_scan_loop
 .space_next_line
     LDY #&03
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     CLC
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     JMP space_line_loop
 .space_save_top
     LDA &00
@@ -357,9 +357,9 @@
     JSR space_shift_up
     PHY
     LDY #&03
-    LDA (&a8),Y
+    LDA (zp_ptr_lo),Y
     INC A
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     PLY
     CLC
     LDA &00
@@ -370,57 +370,57 @@
     STA &01
     LDA #&20
     INY
-    STA (&a8),Y
+    STA (zp_ptr_lo),Y
     INY
     INY
     JMP space_scan_loop
 .space_shift_up
-    LDA &a8
+    LDA zp_ptr_lo
     PHA
-    LDA &a9
+    LDA zp_ptr_hi
     PHA
     TYA
     CLC
-    ADC &a8
-    STA &a8
-    LDA &a9
+    ADC zp_ptr_lo
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     LDA &00
-    STA &ac
+    STA zp_tmp_lo
     LDA &01
-    STA &ad
+    STA zp_tmp_hi
     SEC
     LDA &00
     SBC #&01
-    STA &aa
+    STA zp_work_lo
     LDA &01
     SBC #&00
-    STA &ab
+    STA zp_work_hi
 .space_copy_loop
     EQUB &B2, &AA  \ LDA (0xaa)
     EQUB &92, &AC  \ STA (0xac)
     SEC
-    LDA &ac
+    LDA zp_tmp_lo
     SBC #&01
-    STA &ac
-    LDA &ad
+    STA zp_tmp_lo
+    LDA zp_tmp_hi
     SBC #&00
-    STA &ad
+    STA zp_tmp_hi
     SEC
-    LDA &aa
+    LDA zp_work_lo
     SBC #&01
-    STA &aa
-    LDA &ab
+    STA zp_work_lo
+    LDA zp_work_hi
     SBC #&00
-    STA &ab
+    STA zp_work_hi
     CMP &a9
     BNE space_copy_loop
-    LDA &aa
+    LDA zp_work_lo
     CMP &a8
     BNE space_copy_loop
     PLA
-    STA &a9
+    STA zp_ptr_hi
     PLA
-    STA &a8
+    STA zp_ptr_lo
     RTS
