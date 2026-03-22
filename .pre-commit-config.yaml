@@ -3,3 +3,11 @@ repos:
     rev: v0.1.0
     hooks:
       - id: beebasm-fmt
+  - repo: local
+    hooks:
+      - id: check-rom
+        name: check ROM matches original
+        entry: ./check.sh
+        language: script
+        files: '\.asm$'
+        pass_filenames: false
