@@ -25,13 +25,21 @@ along, or for future reference in other BBC Micro reverse engineering projects.
 Run `./check.sh` to assemble and verify. Requires `beebasm` on PATH.
 The disassembler requires a Python venv: `.venv/bin/python3 disassemble.py`.
 
+## Assembly style
+Follow `STYLE.md` for all assembly code. Key points:
+- Use named constants for ALL addresses — no raw hex in instructions
+- Use real 65C02 instructions (`LDA (&a8)`, `PHX`, etc.), not EQUB workarounds
+- Use `EQUS 13, "text", 0` not separate EQUB/EQUS lines
+- Lowercase hex consistently
+- Compact logically related instructions onto one line with `:`
+- Scope `{ }` around whole routines, not individual loops
+- Comments describe what/why, never reference specific addresses
+
 ## Key technical notes
 - The ROM is 65C02 (BBC Master). Use `CPU 1` in beebasm.
-- Service-only ROM (type &82), service entry at &802B.
-- Two inline-string routines at &89F0 and &8A0F: after `JSR` to these,
-  the following bytes are a null-terminated string (data), not code.
+- Service-only ROM (type &82).
+- Two inline-string routines (`print_inline` and `copy_inline_to_stack`):
+  after `JSR` to these, the following bytes are data, not code.
 - beebasm optimizes absolute addressing to zero-page when operand < &100.
   Some instructions use EQUB to preserve the original 3-byte encoding.
-- Command table at &8219: null-terminated name, 2-byte handler addr (LE),
-  null-terminated help text. Ends with &FF.
 
