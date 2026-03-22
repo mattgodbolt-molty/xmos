@@ -106,9 +106,12 @@ xmos/
 
 ## Dependencies
 
-- jsbeeb (git submodule or npm link)
+- jsbeeb as a git npm dependency: `"jsbeeb": "github:mattgodbolt/jsbeeb"`
 - vitest
 - Node.js 18+
+
+No submodule needed — npm handles the checkout from GitHub directly.
+Can pin to a specific commit or tag for reproducibility.
 
 ## Open questions
 
