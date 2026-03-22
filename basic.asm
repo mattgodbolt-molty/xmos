@@ -15,29 +15,27 @@
         INY
         CPY #&12
         BNE copy_template
-}
-    JSR find_incore_name        \ Find and validate the incore filename
-    LDA &b2                     \ Save BASIC string pointer
-    PHA
-    LDA basic_str_hi
-    PHA
-    LDA basic_page_hi           \ PAGE = start of BASIC program
-    STA osfile_block + 3        \ Load address high byte
-    STA osfile_block + 11       \ Start address high byte
-    LDA basic_top_lo            \ TOP low byte
-    STA osfile_block + 14       \ End address low byte
-    LDA basic_top_hi            \ TOP high byte
-    STA osfile_block + 15       \ End address high byte
-    LDA #&00                    \ OSFILE A=0: save file
-    LDX #LO(osfile_block)
-    LDY #HI(osfile_block)
-    JSR osfile
-    STROUT saved_msg
-    PLA                         \ Restore BASIC string pointer
-    STA basic_str_hi
-    PLA
-    STA basic_str_lo
-{
+        JSR find_incore_name    \ Find and validate the incore filename
+        LDA &b2                 \ Save BASIC string pointer
+        PHA
+        LDA basic_str_hi
+        PHA
+        LDA basic_page_hi       \ PAGE = start of BASIC program
+        STA osfile_block + 3    \ Load address high byte
+        STA osfile_block + 11   \ Start address high byte
+        LDA basic_top_lo        \ TOP low byte
+        STA osfile_block + 14   \ End address low byte
+        LDA basic_top_hi        \ TOP high byte
+        STA osfile_block + 15   \ End address high byte
+        LDA #&00                \ OSFILE A=0: save file
+        LDX #LO(osfile_block)
+        LDY #HI(osfile_block)
+        JSR osfile
+        STROUT saved_msg
+        PLA                     \ Restore BASIC string pointer
+        STA basic_str_hi
+        PLA
+        STA basic_str_lo
         LDY #&FF                \ Skip leading spaces in filename
 .skip_spaces
         INY
@@ -54,9 +52,9 @@
         INY
         BNE print_name
 .name_done
+        STROUT saved_msg_end    \ Print closing quote + newline
+        RTS
 }
-    STROUT saved_msg_end        \ Print closing quote + newline
-    RTS
 
 \ --- OSFILE parameter block (18 bytes). Layout per the MOS specification:
 \ +0,1: filename pointer  +2-5: load address  +6-9: exec address
@@ -91,36 +89,34 @@
 \ is loaded, the first line is corrupt, or no "> name" marker is found.
 \ ============================================================================
 .find_incore_name
-    LDA basic_page_hi           \ PAGE high byte
-    STA basic_str_hi
-    LDA #&01                    \ Check byte at PAGE+1 (program present?)
-    STA basic_str_lo
-    LDY #&00
-    LDA (basic_str_lo),Y
-    CMP #&ff
-    BEQ error_no_basic
-    LDA basic_page_hi           \ Point to PAGE+0
-    STA basic_str_hi
-    LDA #&00
-    STA basic_str_lo
-    LDY #&03                    \ Offset 3 = line length in first line
-    LDA (basic_str_lo),Y
-    TAY                         \ Y = end of first line
-    LDA (basic_str_lo),Y
-    CMP #&0d
-    BNE error_bad_program
-    LDY #&03                    \ Search first line for '>' marker
 {
+        LDA basic_page_hi       \ PAGE high byte
+        STA basic_str_hi
+        LDA #&01                \ Check byte at PAGE+1 (program present?)
+        STA basic_str_lo
+        LDY #&00
+        LDA (basic_str_lo),Y
+        CMP #&ff
+        BEQ error_no_basic
+        LDA basic_page_hi       \ Point to PAGE+0
+        STA basic_str_hi
+        LDA #&00
+        STA basic_str_lo
+        LDY #&03                \ Offset 3 = line length in first line
+        LDA (basic_str_lo),Y
+        TAY                     \ Y = end of first line
+        LDA (basic_str_lo),Y
+        CMP #&0d
+        BNE error_bad_program
+        LDY #&03                \ Search first line for '>' marker
 .skip_spaces
         INY
         LDA (basic_str_lo),Y
         CMP #' '
         BEQ skip_spaces
-}
-    LDA (basic_str_lo),Y
-    CMP #&f4                    \ REM token
-    BNE error_no_incore_name
-{
+        LDA (basic_str_lo),Y
+        CMP #&f4                \ REM token
+        BNE error_no_incore_name
 .find_marker                    \ Find '>' character
         INY
         LDA (basic_str_lo),Y
