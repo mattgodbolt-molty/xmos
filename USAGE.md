@@ -95,7 +95,7 @@ Redefined keys on, and are:
 Jump/fire : RETURN
 ```
 
-The defaults map to a left-hand cluster on the BBC keyboard.
+The defaults are CAPS LOCK, CTRL, :, / and RETURN.
 
 ### BASIC Utilities
 
