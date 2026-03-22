@@ -117,8 +117,11 @@ from BASIC — produces the error `VAR works only in BASIC` otherwise.
 **`*L`** — Set up MODE 128 (shadow screen mode) with function key
 definitions for the editing environment.
 
-**`*STORE`** — Save the current ROM workspace state (including key
-definitions and aliases) so it persists across soft resets (BREAK).
+**`*STORE`** — Save your current XMOS configuration (aliases, key
+definitions, XON state) so it survives BREAK. Without `*STORE`,
+a reset reinitialises these to their defaults. The typical workflow
+is: set up your aliases and key mappings, then `*STORE` to keep
+them.
 
 ### Development Tools
 
