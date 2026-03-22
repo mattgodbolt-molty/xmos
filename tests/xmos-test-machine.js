@@ -41,8 +41,11 @@ export async function bootWithXmos() {
     // Hard reset (CTRL+BREAK) so the MOS re-scans ROM slots
     // and recognises the newly loaded SWRAM contents.
     // A soft reset (BREAK) skips the ROM scan.
+    // The hard reset calls fdc.powerOnReset() which clears the disc,
+    // so we re-load it afterwards for commands that need disc access.
     machine.processor.reset(true);
     await machine.runUntilInput();
+    machine.processor.fdc.loadDisc(0, fdc.discFor(machine.processor.fdc, "", data));
 
     return machine;
 }
