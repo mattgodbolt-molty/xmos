@@ -1,63 +1,149 @@
-# XMOS Command Reference
+# XMOS User Guide
 
-XMOS is a sideways ROM for the BBC Master that provides utility commands
-and extended BASIC editing. Enable it with `*XON`, disable with `*XOFF`.
+XMOS is a sideways ROM for the BBC Master that adds utility commands
+and an extended line editing mode. Written by Richard Talbot-Watkins
+and Matt Godbolt, circa 1992.
+
+## Installation
+
+Load the ROM into sideways RAM:
+
+```
+*SRLOAD XMOS 8000 7Q
+```
+
+Then press CTRL+BREAK to activate it. Type `*HELP XMOS` to verify
+it's working.
+
+Use `*STORE` to preserve the ROM state across soft resets (BREAK).
+
+## Extended Input Mode
+
+Enable with `*XON`, disable with `*XOFF`. When enabled, the command
+line gains cursor-based editing features:
+
+- **Left/Right arrows** move the cursor within the line for
+  insert/delete editing
+- **COPY** deletes the character under the cursor
+- **Ctrl-U** clears the current line
+- **SHIFT-Up/Down** scroll through input history
+- **TAB** after a line number recalls that BASIC program line for
+  editing (e.g. type `10` then TAB to edit line 10)
+- **Pressing a cursor key on a blank line** exits extended input mode
+  and returns to normal BBC cursor editing
+- **Typing SAVE** in BASIC executes `*S` (save with incore name)
+
+Type `*HELP FEATURES` for the built-in feature summary.
 
 ## Commands
 
-### Extended Input
-
-| Command | Description |
-|---------|-------------|
-| `*XON` | Enable extended input mode (cursor editing, insert/delete) |
-| `*XOFF` | Disable extended input mode |
-| `*FEATURES` | Display documentation for extended input features |
-
 ### Alias Management
 
-| Command | Description |
-|---------|-------------|
-| `*ALIAS <name> <expansion>` | Define a command alias |
-| `*ALIASES` | Show all active aliases |
-| `*ALICLR` | Clear all aliases |
-| `*ALILD` | Load aliases from file |
-| `*ALISV` | Save aliases to file |
+**`*ALIAS <name> <expansion>`** — Define a command alias. When you
+type `*name` at the prompt, XMOS types the expansion text for you
+(without pressing RETURN), so you can review or edit before
+executing. Aliases support parameter substitution:
 
-Aliases allow you to define shorthand names for frequently used commands.
-The `;` character can be used to split multiple commands on one line.
+- `%0` to `%9` — positional parameters from the command line
+- `%%` — literal percent sign
+- `%U` — emit VDU 11 (cursor up) and VDU 21 (disable display)
+
+Example:
+```
+*ALIAS L *LOAD %0
+*L myfile        → types "*LOAD myfile" at the prompt
+```
+
+**`*ALIASES`** — List all defined aliases in `name = expansion`
+format. Produces no output if no aliases are defined.
+
+**`*ALICLR`** — Clear all aliases.
+
+**`*ALILD <filename>`** — Load alias definitions from a file
+(previously saved with `*ALISV`).
+
+**`*ALISV <filename>`** — Save current alias definitions to a file.
 
 ### Key Redefinition
 
-| Command | Description |
-|---------|-------------|
-| `*DEFKEYS` | Enter interactive key redefinition mode |
-| `*KEYON` | Enable redefined key mappings |
-| `*KEYOFF` | Disable redefined key mappings |
-| `*KSTATUS` | Display current KEYON/KEYOFF status and mappings |
+**`*DEFKEYS`** — Enter interactive mode to redefine the five
+joystick-style keys (Left, Right, Up, Down, Jump/Fire). Follow the
+on-screen prompts to press the desired key for each direction.
+
+**`*KEYON`** — Enable the redefined key mappings. Prints
+`Keys now redefined`.
+
+**`*KEYOFF`** — Disable redefined keys and restore normal keyboard
+behaviour. Prints `Redefined keys off`.
+
+**`*KSTATUS`** — Show current key redefinition status. If keys are
+off, prints `Redefined keys off`. If on, lists all five mappings:
+
+```
+Redefined keys on, and are:
+     Left : CAPS LOCK
+    Right : CTRL
+       Up : :
+     Down : /
+Jump/fire : RETURN
+```
 
 ### BASIC Utilities
 
-| Command | Description |
-|---------|-------------|
-| `*S` | Save the current BASIC program using its incore filename |
-| `*BAU` | Save BASIC with incore name (alternative entry point) |
-| `*L` | Select MODE 128 and set up function key definitions |
-| `*LVAR` | List all current BASIC variables and their values |
-| `*SPACE` | Insert spaces into BASIC programs (reformatting) |
-| `*STORE` | Preserve function key definitions across BREAK |
+**`*S`** — Save the current BASIC program using the filename
+embedded in the first line. The first line must contain a `REM`
+statement with `>` followed by the filename:
 
-The `*S` command looks for a `REM > Filename` line at the start of
-your BASIC program and uses that as the save filename.
+```
+10 REM > MyProg
+20 PRINT "Hello"
+*S
+Program saved as 'MyProg'
+```
+
+**`*BAU`** — Break Apart Utility. Splits multi-statement BASIC lines
+(separated by colons) into individual lines, then renumbers. Colons
+inside quoted strings and after `REM` are preserved. Must be called
+from BASIC.
+
+**`*SPACE`** — Insert spaces around tokenised BASIC keywords to
+improve readability. Must be called from BASIC.
+
+**`*LVAR`** — List the names of all BASIC variables currently
+defined on the heap (real numbers and strings). Does not list static
+integer variables (`A%` to `Z%`) or their values. Must be called
+from BASIC — produces the error `VAR works only in BASIC` otherwise.
+
+**`*L`** — Set up MODE 128 (shadow screen mode) with function key
+definitions for the editing environment.
+
+**`*STORE`** — Save the current ROM workspace state (including key
+definitions and aliases) so it persists across soft resets (BREAK).
 
 ### Development Tools
 
-| Command | Description |
-|---------|-------------|
-| `*DIS <addr>` | Disassemble 6502 code starting at the given address |
-| `*MEM <addr>` | Interactive hex memory editor at the given address |
+**`*DIS <addr>`** — Disassemble 6502/65C02 machine code starting at
+the given hex address. Shows one instruction per line with address,
+mnemonic, hex bytes, and ASCII representation:
 
-## Help
+```
+*DIS 802B
+802B CMP #&04C9 04 I.
+```
 
-Type `*HELP XMOS` to see all available commands.
-Type `*HELP FEATURES` to see extended input documentation.
-Type `*HELP <command>` for help on a specific command.
+Press SPACE to show the next instruction, or any other key to exit.
+
+**`*MEM <addr>`** — Interactive hex/ASCII memory editor. Opens a
+full-screen Mode 7 display showing memory contents. Navigation:
+
+- **Cursor keys** move byte by byte
+- **SHIFT+cursor** scrolls by page
+- **TAB** toggles between hex entry and ASCII entry mode
+- **ESCAPE** exits the editor
+
+## Help System
+
+- `*HELP` — lists all ROMs including XMOS with its sub-topics
+- `*HELP XMOS` — lists all XMOS commands with descriptions
+- `*HELP FEATURES` — describes the extended input features
+- BBC dot-abbreviation works (e.g. `*H. XMOS`, `*HELP X.`)
