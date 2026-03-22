@@ -589,11 +589,11 @@
 \ ============================================================================
 .uninitialised_ram
     EQUB &0d
-FOR n, 1, 27 : EQUB &ff : NEXT
-        FOR n, 1, 54
-            FOR m, 1, 32 : EQUB &00 : NEXT
-                FOR m, 1, 32 : EQUB &ff : NEXT
-                NEXT
-                FOR n, 1, 32 : EQUB &00 : NEXT
-                    FOR n, 1, 16 : EQUB &ff : NEXT
+    FOR n, 1, 27 : EQUB &ff : NEXT
+FOR n, 1, 54
+        FOR m, 1, 32 : EQUB &00 : NEXT
+        FOR m, 1, 32 : EQUB &ff : NEXT
+NEXT
+    FOR n, 1, 32 : EQUB &00 : NEXT
+    FOR n, 1, 16 : EQUB &ff : NEXT
 

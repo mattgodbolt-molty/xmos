@@ -262,7 +262,11 @@ def format_line(c, indent=INDENT, comment_col=COMMENT_COL, comment_style=None):
     # Top-level directives at column 0 — but only when not nested
     # inside a FOR/MACRO/IF block (where they're part of the body).
     instr_upper = (c['instruction'] or '').upper()
-    is_toplevel = instr_upper in TOPLEVEL_DIRECTIVES and indent <= INDENT
+    # Inline FOR...NEXT on a single line is NOT top-level — it's a code instruction.
+    colon_instrs = {s[0].upper() for s in c.get('colon_stmts', []) if s[0]}
+    is_self_contained = bool(colon_instrs & NEST_OPEN and colon_instrs & NEST_CLOSE)
+    is_toplevel = (instr_upper in TOPLEVEL_DIRECTIVES and indent <= INDENT
+                   and not is_self_contained)
     effective_indent = 0 if is_toplevel else indent
 
     # Assemble line
@@ -318,18 +322,37 @@ def format_file(lines, indent=INDENT, comment_col=COMMENT_COL, comment_style=Non
 
         c = classify_line(line)
 
-        instr_upper = (c['instruction'] or '').upper()
+        # Count nesting changes from ALL instructions on this line
+        # (handles FOR ... : NEXT on a single line)
+        all_instrs = [s[0].upper() for s in c.get('colon_stmts', []) if s[0]]
+        if not all_instrs:
+            instr = (c['instruction'] or '').upper()
+            if instr:
+                all_instrs = [instr]
+
+        # Scope braces also affect nesting
+        if c['type'] == 'brace':
+            if c['instruction'] == '{':
+                all_instrs = ['{']
+            elif c['instruction'] == '}':
+                all_instrs = ['}']
+
+        nest_open = NEST_OPEN | {'{'}
+        nest_close = NEST_CLOSE | {'}'}
+        opens = sum(1 for i in all_instrs if i in nest_open)
+        closes = sum(1 for i in all_instrs if i in nest_close)
+        toggles = sum(1 for i in all_instrs if i in NEST_TOGGLE)
 
         # Decrease nesting BEFORE formatting the closing directive
-        if instr_upper in NEST_CLOSE or instr_upper in NEST_TOGGLE:
-            nesting = max(0, nesting - 1)
+        if closes > opens:
+            nesting = max(0, nesting - (closes - opens))
 
         effective_indent = indent + indent * nesting
         formatted = format_line(c, effective_indent, comment_col, comment_style)
 
         # Increase nesting AFTER formatting the opening directive
-        if instr_upper in NEST_OPEN or instr_upper in NEST_TOGGLE:
-            nesting += 1
+        if opens > closes:
+            nesting += opens - closes
 
         result.append(formatted)
 

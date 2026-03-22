@@ -227,22 +227,22 @@
     JMP dis_format_loop
 .print_backspace
     LDA #&08
-FOR n, 1, 5 : JSR oswrch : NEXT
-        LDY #&01
-        LDA (&a8),Y
-        BMI bau_space_rts
-        STA dec_value_hi
-        LDY #&02
-        LDA (&a8),Y
-        STA dec_value_lo
-        PHX
-        PHY
-        JSR print_decimal
-        PLY
-        PLX
+    FOR n, 1, 5 : JSR oswrch : NEXT
+    LDY #&01
+    LDA (&a8),Y
+    BMI bau_space_rts
+    STA dec_value_hi
+    LDY #&02
+    LDA (&a8),Y
+    STA dec_value_lo
+    PHX
+    PHY
+    JSR print_decimal
+    PLY
+    PLX
 .bau_space_rts
-        RTS
+    RTS
 .msg_now_splitting
-        EQUS 13, "Now splitting line:      " : EQUB 0
+    EQUS 13, "Now splitting line:      " : EQUB 0
 .msg_now_spacing
-        EQUS 13, "Now spacing out line:      " : EQUB 0
+    EQUS 13, "Now spacing out line:      " : EQUB 0

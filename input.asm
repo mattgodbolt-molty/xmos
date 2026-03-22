@@ -28,13 +28,13 @@
     JSR osbyte
 .reset_skip_xon
 {
-    LDY #&00                    \ Copy extended input handler code to workspace
+        LDY #&00                \ Copy extended input handler code to workspace
 .copy_loop
-    LDA extended_input_code,Y
-    STA (zp_work_lo),Y
-    INY
-    CPY #&D0                    \ Copy &D0 (208) bytes
-    BNE copy_loop
+        LDA extended_input_code,Y
+        STA (zp_work_lo),Y
+        INY
+        CPY #&D0                \ Copy &D0 (208) bytes
+        BNE copy_loop
 }
     PLY : PLX : PLA
     RTS
@@ -104,58 +104,58 @@
     JMP xi_read_loop
 .xi_dispatch
 {
-    LDA xi_char
-    CMP #&88
-    BNE check_right
-    JMP xi_handle_left
+        LDA xi_char
+        CMP #&88
+        BNE check_right
+        JMP xi_handle_left
 .check_right
-    CMP #&89
-    BNE check_delete
-    JMP xi_handle_right
+        CMP #&89
+        BNE check_delete
+        JMP xi_handle_right
 .check_delete
-    CMP #&7f
-    BNE check_cr
-    JMP xi_handle_delete
+        CMP #&7f
+        BNE check_cr
+        JMP xi_handle_delete
 .check_cr
-    CMP #&0d
-    BNE check_escape
-    JMP xi_handle_cr
+        CMP #&0d
+        BNE check_escape
+        JMP xi_handle_cr
 .check_escape
-    CMP #&1b
-    BNE check_clear
-    JMP xi_cr_restore_keys
+        CMP #&1b
+        BNE check_clear
+        JMP xi_cr_restore_keys
 .check_clear
-    CMP #&15
-    BNE check_copy
-    JMP xi_handle_clear
+        CMP #&15
+        BNE check_copy
+        JMP xi_handle_clear
 .check_copy
-    CMP #&8b
-    BNE check_down
-    JMP xi_handle_copy_up
+        CMP #&8b
+        BNE check_down
+        JMP xi_handle_copy_up
 .check_down
-    CMP #&8a
-    BNE check_tab
-    JMP xi_handle_copy_down
+        CMP #&8a
+        BNE check_tab
+        JMP xi_handle_copy_down
 .check_tab
-    CMP #&87
-    BNE check_ctrl_n
-    JMP xi_handle_tab
+        CMP #&87
+        BNE check_ctrl_n
+        JMP xi_handle_tab
 .check_ctrl_n
-    CMP #&0e
-    BNE check_ctrl_o
-    JSR oswrch
+        CMP #&0e
+        BNE check_ctrl_o
+        JSR oswrch
 .check_ctrl_o
-    CMP #&0f
-    BNE check_htab
-    JSR oswrch
+        CMP #&0f
+        BNE check_htab
+        JSR oswrch
 .check_htab
-    CMP #&09
-    BNE check_null
-    JMP xi_handle_htab
+        CMP #&09
+        BNE check_null
+        JMP xi_handle_htab
 .check_null
-    CMP #&00
-    BNE xi_handle_printable
-    JMP xi_handle_null
+        CMP #&00
+        BNE xi_handle_printable
+        JMP xi_handle_null
 }
 .xi_handle_printable
     LDA xi_char
@@ -232,82 +232,82 @@
     RTS
 .xi_handle_left
 {
-    LDA xi_cursor_pos
-    BNE no_scroll
-    LDY #&8c
-    JMP xi_reset_cursor_keys
+        LDA xi_cursor_pos
+        BNE no_scroll
+        LDY #&8c
+        JMP xi_reset_cursor_keys
 .no_scroll
-    LDA xi_line_len
-    BEQ done
-    DEC xi_line_len
-    LDA #&08
-    JSR oswrch
+        LDA xi_line_len
+        BEQ done
+        DEC xi_line_len
+        LDA #&08
+        JSR oswrch
 .done
-    JMP xi_read_loop
+        JMP xi_read_loop
 }
 .xi_handle_right
 {
-    LDA xi_cursor_pos
-    BNE no_scroll
-    LDY #&8d
-    JMP xi_reset_cursor_keys
+        LDA xi_cursor_pos
+        BNE no_scroll
+        LDY #&8d
+        JMP xi_reset_cursor_keys
 .no_scroll
-    LDA xi_line_len
-    CMP xi_cursor_pos
-    BEQ done
-    INC xi_line_len
-    LDA #&09
-    JSR oswrch
+        LDA xi_line_len
+        CMP xi_cursor_pos
+        BEQ done
+        INC xi_line_len
+        LDA #&09
+        JSR oswrch
 .done
-    JMP xi_read_loop
+        JMP xi_read_loop
 }
 .xi_handle_delete
 {
-    LDA xi_line_len
-    BEQ done
-    SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
-    PHA
-    BEQ do_delete
-    TAX
-    LDY xi_line_len
+        LDA xi_line_len
+        BEQ done
+        SEC
+        LDA xi_cursor_pos
+        SBC xi_line_len
+        PHA
+        BEQ do_delete
+        TAX
+        LDY xi_line_len
 .shift_loop
-    LDA (zp_ptr_lo),Y
-    DEY
-    STA (zp_ptr_lo),Y
-    INY
-    INY
-    DEX
-    BNE shift_loop
+        LDA (zp_ptr_lo),Y
+        DEY
+        STA (zp_ptr_lo),Y
+        INY
+        INY
+        DEX
+        BNE shift_loop
 .do_delete
-    LDA #&7f
-    JSR oswrch
-    DEC xi_line_len
-    DEC xi_cursor_pos
-    LDY xi_line_len
-    PLA
-    BEQ done
-    PHA
-    TAX
+        LDA #&7f
+        JSR oswrch
+        DEC xi_line_len
+        DEC xi_cursor_pos
+        LDY xi_line_len
+        PLA
+        BEQ done
+        PHA
+        TAX
 .redraw_loop
-    LDA (zp_ptr_lo),Y
-    JSR oswrch
-    INY
-    DEX
-    BNE redraw_loop
-    LDA #' '
-    JSR oswrch
-    PLA
-    TAX
-    INX
+        LDA (zp_ptr_lo),Y
+        JSR oswrch
+        INY
+        DEX
+        BNE redraw_loop
+        LDA #' '
+        JSR oswrch
+        PLA
+        TAX
+        INX
 .bs_loop
-    LDA #&08
-    JSR oswrch
-    DEX
-    BNE bs_loop
+        LDA #&08
+        JSR oswrch
+        DEX
+        BNE bs_loop
 .done
-    JMP xi_read_loop
+        JMP xi_read_loop
 }
 .xi_handle_cr
     LDA xon_flag
@@ -387,30 +387,30 @@
     JMP xi_read_loop
 .xi_do_clear
 {
-    LDA xi_cursor_pos
-    BEQ done
-    SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
-    BEQ del_loop
-    TAX
+        LDA xi_cursor_pos
+        BEQ done
+        SEC
+        LDA xi_cursor_pos
+        SBC xi_line_len
+        BEQ del_loop
+        TAX
 .fwd_loop
-    LDA #&09
-    JSR oswrch
-    DEX
-    BNE fwd_loop
+        LDA #&09
+        JSR oswrch
+        DEX
+        BNE fwd_loop
 .del_loop
-    LDX xi_cursor_pos
+        LDX xi_cursor_pos
 .del_char
-    LDA #&7f
-    JSR oswrch
-    DEX
-    BNE del_char
-    LDA #&00
-    STA xi_line_len
-    STA xi_cursor_pos
+        LDA #&7f
+        JSR oswrch
+        DEX
+        BNE del_char
+        LDA #&00
+        STA xi_line_len
+        STA xi_cursor_pos
 .done
-    RTS
+        RTS
 }
 .xi_handle_null
     LDA xi_cursor_pos

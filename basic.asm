@@ -2,13 +2,13 @@
 
 .cmd_s
 {
-    LDY #&00
+        LDY #&00
 .copy_template                  \ Copy OSFILE parameter block template
-    LDA osfile_template,Y
-    STA osfile_block,Y
-    INY
-    CPY #&12
-    BNE copy_template
+        LDA osfile_template,Y
+        STA osfile_block,Y
+        INY
+        CPY #&12
+        BNE copy_template
 }
     JSR find_incore_name        \ Find and validate the incore filename
     LDA &b2                     \ Save BASIC string pointer
@@ -32,21 +32,21 @@
     PLA
     STA basic_str_lo
 {
-    LDY #&FF                    \ Skip leading spaces in filename
+        LDY #&FF                \ Skip leading spaces in filename
 .skip_spaces
-    INY
-    LDA (basic_str_lo),Y
-    CMP #' '
-    BEQ skip_spaces
+        INY
+        LDA (basic_str_lo),Y
+        CMP #' '
+        BEQ skip_spaces
 .print_name                     \ Print the filename
-    LDA (basic_str_lo),Y
-    CMP #' '
-    BEQ name_done
-    CMP #&0D
-    BEQ name_done
-    JSR osasci
-    INY
-    BNE print_name
+        LDA (basic_str_lo),Y
+        CMP #' '
+        BEQ name_done
+        CMP #&0D
+        BEQ name_done
+        JSR osasci
+        INY
+        BNE print_name
 .name_done
 }
     STROUT saved_msg_end        \ Print closing quote + newline
@@ -96,23 +96,23 @@
     LDY #&03                    \ Search first line for '>' marker
 {
 .skip_spaces
-    INY
-    LDA (basic_str_lo),Y
-    CMP #' '
-    BEQ skip_spaces
+        INY
+        LDA (basic_str_lo),Y
+        CMP #' '
+        BEQ skip_spaces
 }
     LDA (basic_str_lo),Y
     CMP #&f4                    \ REM token
     BNE error_no_incore_name
 {
 .find_marker                    \ Find '>' character
-    INY
-    LDA (basic_str_lo),Y
-    CMP #'>'
-    BEQ set_filename_and_return
-    CMP #&0d
-    BEQ error_no_incore_name
-    BNE find_marker
+        INY
+        LDA (basic_str_lo),Y
+        CMP #'>'
+        BEQ set_filename_and_return
+        CMP #&0d
+        BEQ error_no_incore_name
+        BNE find_marker
 }
 .error_no_incore_name
     JSR copy_inline_to_stack    \ BRK error: "No incore filename"
