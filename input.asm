@@ -30,13 +30,15 @@
     LDX #&01
     JSR osbyte
 .reset_skip_xon
-    LDY #&00                    \ Copy extended input handler code to workspace
-.reset_copy_loop
-    LDA extended_input_code,Y
-    STA (zp_work_lo),Y
-    INY
-    CPY #&D0                    \ Copy &D0 (208) bytes
-    BNE reset_copy_loop
+{
+        LDY #&00                \ Copy extended input handler code to workspace
+.copy_loop
+        LDA extended_input_code,Y
+        STA (zp_work_lo),Y
+        INY
+        CPY #&D0                \ Copy &D0 (208) bytes
+        BNE copy_loop
+}
     PLY : PLX : PLA
     RTS
 \ ============================================================================
