@@ -247,3 +247,51 @@ All are legitimate and cannot be converted:
 - 26 `{ }` scoped blocks with clean local names
 - 46 legitimate absolute addresses remaining
 - Assembly byte-identical: `check.sh` passes at every commit
+
+## 2026-03-22: Automated testing with jsbeeb
+
+### Setup
+Using jsbeeb's `TestMachine` class (from npm) with vitest to run XMOS
+commands in a headless BBC Master emulator. The test helper boots a
+Master, loads the disc, `*SRLOAD`s the ROM into SWRAM slot 7, and hard
+resets to activate it.
+
+### Key discoveries
+
+**Hard reset required for ROM recognition**: A soft reset (BREAK) does
+NOT re-scan sideways ROM slots on the BBC Master. Only a hard reset
+(CTRL+BREAK) triggers the MOS to page through all slots, read the type
+byte at &8006, and rebuild the ROM type table at &2A1. This is real
+hardware behaviour, not a jsbeeb quirk.
+
+**SWRAM survives reset**: Sideways RAM contents persist across both
+soft and hard resets in jsbeeb (and on real hardware). The `ramRomOs`
+array is only zeroed below `romOffset` (main RAM), not in the ROM
+area. The `*ROMS` command (from the SRAM utility in ROM slot 8) can
+read SWRAM contents at any time, even when the MOS type table shows
+the slot as empty.
+
+**Disc cleared by hard reset**: `fdc.powerOnReset()` is called during
+hard reset, which clears the loaded disc image. Tests that need disc
+access must re-load the disc after the hard reset.
+
+**Text capture timing**: `TestMachine.type()` runs the CPU to process
+keypresses, and the MOS may begin producing output during that
+execution. Capture hooks must be installed *before* `type()` to avoid
+missing the first few characters.
+
+**Paged output**: The MOS pauses long output with "Shift for more".
+Tests hold SHIFT during `runFor()` to prevent this.
+
+### Test results
+16 tests across 3 files, all passing in ~7s:
+- `help.test.js` — *HELP XMOS, *HELP, *HELP FEATURES, dot-abbreviation
+- `xon-xoff.test.js` — *XON, *XOFF, *KEYON, *KEYOFF, *KSTATUS
+- `alias.test.js` — *ALIAS define, *ALIASES list, multiple aliases, *ALICLR
+
+### Open issues
+- Alias expansion works (verified via MCP screenshots) but text capture
+  doesn't pick up output from nested OSCLI calls. Needs investigation.
+- Each test boots a fresh Master (~1s overhead). jsbeeb supports
+  `snapshotState()`/`restoreState()` but doesn't include SWRAM in the
+  snapshot — extending this would make tests much faster.
