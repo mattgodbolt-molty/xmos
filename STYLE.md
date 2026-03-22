@@ -50,11 +50,27 @@ FOR n, 1, 10 : INY : NEXT      \ skip 10-byte entry
 ```
 
 ## Scoping with { }
-- Wrap **whole routines or logical sections** in `{ }`, not individual loops
-- One scope per function — like `{ }` in C around a function body
-- Use `.*label` to make the entry point visible outside the scope
-- Labels within the scope (loop targets, branches) are automatically local
-- Do NOT open and close `{ }` around every 3-line branch target
+Put the function name label BEFORE the `{`. Everything inside is local:
+```
+.my_function
+{
+    LDA #&00
+.loop
+    JSR osasci
+    INY
+    BNE loop
+    RTS
+}
+```
+`.my_function` is global (outside the braces). `.loop` is local (inside).
+This means internal labels like `.loop`, `.done`, `.skip` can be reused
+across functions without clashing.
+
+- Wrap **whole functions** in `{ }` — one scope per function
+- The function name label goes OUTSIDE the scope (naturally global)
+- Use `.*label` only for the rare case where an internal label needs
+  to be visible externally (e.g. self-modifying code patched from outside)
+- Do NOT scope individual loops or branch targets mid-function
 
 ## Comments
 - Comments should describe **what and why**, not restate the instruction

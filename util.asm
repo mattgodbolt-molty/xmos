@@ -5,28 +5,28 @@
 \ the JSR. Returns to the instruction following the null terminator.
 \ ============================================================================
 .print_inline
-    PLA                         \ Pull return address (points to string - 1)
-    STA zp_ptr_lo
-    PLA
-    STA zp_ptr_hi
-    LDY #&00
 {
+        PLA                     \ Pull return address (points to string - 1)
+        STA zp_ptr_lo
+        PLA
+        STA zp_ptr_hi
+        LDY #&00
 .loop
         INY
         LDA (zp_ptr_lo),Y
         JSR osasci
         BNE loop
+        CLC                     \ Adjust return address past the string
+        TYA
+        ADC zp_ptr_lo
+        STA zp_ptr_lo
+        LDA zp_ptr_hi
+        ADC #&00
+        PHA                     \ Push adjusted return address
+        LDA zp_ptr_lo
+        PHA
+        RTS                     \ "Return" to instruction after the string
 }
-    CLC                         \ Adjust return address past the string
-    TYA
-    ADC zp_ptr_lo
-    STA zp_ptr_lo
-    LDA zp_ptr_hi
-    ADC #&00
-    PHA                         \ Push adjusted return address
-    LDA zp_ptr_lo
-    PHA
-    RTS                         \ "Return" to instruction after the string
 
 \ ============================================================================
 \ copy_inline_to_stack — Copy inline code/data after the JSR to the stack
@@ -34,21 +34,21 @@
 \ since BRK requires the error block to sit at the current PC.
 \ ============================================================================
 .copy_inline_to_stack
-    PLA                         \ Pull return address (points to code - 1)
-    STA zp_ptr_lo
-    PLA
-    STA zp_ptr_hi
-    LDA #&00
-    TAY
-    STA &0100,Y                 \ Store null at start of stack page
 {
+        PLA                     \ Pull return address (points to code - 1)
+        STA zp_ptr_lo
+        PLA
+        STA zp_ptr_hi
+        LDA #&00
+        TAY
+        STA &0100,Y             \ Store null at start of stack page
 .loop
         INY
         LDA (zp_ptr_lo),Y       \ Copy bytes to stack page
         STA &0100,Y
         BNE loop
+        JMP &0100               \ Execute the copied code
 }
-    JMP &0100                   \ Execute the copied code
 \ ============================================================================
 \ compare_string — Case-insensitive match of the command line against a
 \ null-terminated keyword. Supports BBC-style dot abbreviation (e.g. "D."
@@ -57,14 +57,14 @@
 \ on failure. compare_string_y holds Y on the most recent successful match.
 \ ============================================================================
 .compare_string
-    LDX #&00
-    LDA &a8                     \ Self-modify the CMP and LDA absolute,X below
-    STA cmp_str_addr + 1
-    STA lda_str_addr + 1
-    LDA zp_ptr_hi
-    STA cmp_str_addr + 2
-    STA lda_str_addr + 2
 {
+        LDX #&00
+        LDA &a8                 \ Self-modify the CMP and LDA absolute,X below
+        STA cmp_str_addr + 1
+        STA lda_str_addr + 1
+        LDA zp_ptr_hi
+        STA cmp_str_addr + 2
+        STA lda_str_addr + 2
 .loop
         LDA (cmd_line_lo),Y     \ Get next character from command line
         CMP #'.'
@@ -95,9 +95,9 @@
         INY
         BNE loop
 .no_match
+        CLC                     \ C=0: no match
+        RTS
 }
-    CLC                         \ C=0: no match
-    RTS
 .compare_string_y
     EQUB &07                    \ Saved Y position after last match
 \ ============================================================================

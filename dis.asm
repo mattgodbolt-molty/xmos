@@ -52,16 +52,20 @@
 \ Entry point for *DIS [address]. If no address given, continues from
 \ the last position (saved across invocations in mem_vdu_1/2).
 .cmd_dis
-    JSR parse_cmdline
-    CMP #&0d
-    BEQ dis_display_line
-    JSR parse_hex_word
-    BRA dis_print_header
+{
+        JSR parse_cmdline
+        CMP #&0d
+        BEQ dis_display_line
+        JSR parse_hex_word
+        BRA dis_print_header
+}
 .dis_display_line
-    LDA mem_vdu_1
-    STA zp_src_lo
-    LDA mem_vdu_2
-    STA zp_src_hi
+{
+        LDA mem_vdu_1
+        STA zp_src_lo
+        LDA mem_vdu_2
+        STA zp_src_hi
+}
 \ Print one disassembled line: address, mnemonic, operand, raw bytes, ASCII.
 \ The opcode is multiplied by 4 to index into a 1024-byte lookup table that
 \ holds {3-char mnemonic, addressing mode index} for each of the 256 opcodes.
@@ -190,18 +194,20 @@
 \ Wait for a keypress: any key continues to the next instruction,
 \ Escape saves the current position and exits.
 .dis_wait_key
-    JSR osrdch
-    BCS dis_save_state
-    JMP dis_print_header
+{
+        JSR osrdch
+        BCS save_state
+        JMP dis_print_header
 \ Save current address so *DIS with no argument can resume here.
-.dis_save_state
-    LDA zp_src_lo
-    STA mem_vdu_1
-    LDA zp_src_hi
-    STA mem_vdu_2
-    LDA #&00
-    STA &ff
-    RTS
+.save_state
+        LDA zp_src_lo
+        STA mem_vdu_1
+        LDA zp_src_hi
+        STA mem_vdu_2
+        LDA #&00
+        STA &ff
+        RTS
+}
 \ Print the high byte of a two-byte operand (byte at PC+2).
 .dis_check_up
     PHY
@@ -261,22 +267,24 @@
 \ Print 5 backspaces then overwrite with the current BASIC line number
 \ (read from the line header). Used by the line-spacing progress display.
 .print_backspace
-    LDA #&08
-    FOR n, 1, 5 : JSR oswrch : NEXT
-    LDY #&01
-    LDA (&a8),Y
-    BMI bau_space_rts
-    STA dec_value_hi
-    LDY #&02
-    LDA (&a8),Y
-    STA dec_value_lo
-    PHX
-    PHY
-    JSR print_decimal
-    PLY
-    PLX
-.bau_space_rts
-    RTS
+{
+        LDA #&08
+        FOR n, 1, 5 : JSR oswrch : NEXT
+        LDY #&01
+        LDA (&a8),Y
+        BMI rts
+        STA dec_value_hi
+        LDY #&02
+        LDA (&a8),Y
+        STA dec_value_lo
+        PHX
+        PHY
+        JSR print_decimal
+        PLY
+        PLX
+.rts
+        RTS
+}
 .msg_now_splitting
     EQUS 13, "Now splitting line:      " : EQUB 0
 .msg_now_spacing
