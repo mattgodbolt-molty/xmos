@@ -1,12 +1,25 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { bootWithXmos, runCommand, captureOutput } from "./xmos-test-machine.js";
 
+const CTRL = 17;
+
 // Press BBC f1 (*KEY 1). MCP F0 (PC keycode 112) maps to BBC f1.
 async function pressBbcF1(machine) {
     machine.processor.sysvia.keyDown(112);
     await machine.runFor(200000);
     machine.processor.sysvia.keyUp(112);
     await machine.runFor(200000);
+}
+
+// Simulate CTRL+BREAK: hold CTRL during a soft reset.
+// On the BBC Master this triggers a full reinitialisation (rescan ROM
+// slots, clear ANDY) without a power-on RAM wipe.
+async function ctrlBreak(machine) {
+    machine.processor.sysvia.keyDown(CTRL);
+    machine.processor.reset(false);
+    await machine.runFor(2_000_000);
+    machine.processor.sysvia.keyUp(CTRL);
+    await machine.runUntilInput();
 }
 
 describe("*STORE — keep function keys on CTRL+BREAK", () => {
@@ -25,11 +38,9 @@ describe("*STORE — keep function keys on CTRL+BREAK", () => {
         expect(output).toContain("HELLO");
     });
 
-    it("function key is lost on soft reset (BREAK) without *STORE", async () => {
-        // The MOS reinitialises the ANDY function key buffer on reset
+    it("function key is lost on CTRL+BREAK without *STORE", async () => {
         await runCommand(machine, "*KEY 1 HELLO");
-        machine.processor.reset(false);
-        await machine.runUntilInput();
+        await ctrlBreak(machine);
 
         const getOutput = captureOutput(machine);
         await pressBbcF1(machine);
@@ -38,29 +49,15 @@ describe("*STORE — keep function keys on CTRL+BREAK", () => {
         expect(output).not.toContain("HELLO");
     });
 
-    it("function key is lost on hard reset (CTRL+BREAK) without *STORE", async () => {
-        await runCommand(machine, "*KEY 1 HELLO");
-        // Hard reset clears ANDY
-        machine.processor.reset(true);
-        await machine.runUntilInput();
-
-        const getOutput = captureOutput(machine);
-        await pressBbcF1(machine);
-        await machine.runFor(2_000_000);
-        const output = getOutput();
-        expect(output).not.toContain("HELLO");
-    });
-
-    // *STORE saves ANDY (function key buffer) to HAZEL store buffers.
-    // alias_init restores from HAZEL on reset, preserving keys across
-    // CTRL+BREAK. However, this doesn't work in jsbeeb — the store
-    // buffer ends up with ROM data instead of ANDY data despite the
-    // mapping appearing correct. See JOURNAL.md for investigation.
-    it.skip("*STORE should preserve function key across CTRL+BREAK (jsbeeb issue)", async () => {
+    // Known bug in original XMOS: the *STORE copy loop doesn't disable
+    // interrupts. If a timer interrupt fires mid-loop, the handler
+    // restores ROMSEL without bit 7, unpaging ANDY. The rest of the
+    // copy reads ROM data instead of function key data. Works in the
+    // browser because interrupt timing differs. Fix: add SEI/CLI.
+    it.skip("*STORE should preserve function key across CTRL+BREAK", async () => {
         await runCommand(machine, "*KEY 1 HELLO");
         await runCommand(machine, "*STORE");
-        machine.processor.reset(true);
-        await machine.runUntilInput();
+        await ctrlBreak(machine);
 
         const getOutput = captureOutput(machine);
         await pressBbcF1(machine);

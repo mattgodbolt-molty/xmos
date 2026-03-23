@@ -357,8 +357,18 @@ lost without `*STORE`.
   recognise the ROM — this wipes all RAM. Something about this
   sequence may be leaving the environment in a state where *STORE
   doesn't work.
-- Next step: add logging to jsbeeb's readmem/writemem during the
-  *STORE copy loop to trace exactly where reads/writes go.
+- **Root cause found:** An interrupt fires mid-copy-loop in *STORE.
+  The interrupt handler restores ROMSEL from the &F4 shadow copy
+  (which is 7, without bit 7), so ANDY is unpaged and the remaining
+  reads hit the ROM instead. Confirmed by tracing: at &8000 (X=0)
+  ROMSEL is &87 and reads ANDY correctly, but at &8022 (X=&22)
+  ROMSEL is &07 and reads ROM data.
+- This is a bug in the original XMOS code — the copy loop should
+  disable interrupts (SEI/CLI) around the ROMSEL bit 7 section.
+  It works in the browser because interrupt timing differs (the
+  timer interrupt happens not to fire during the short loop).
+- This is a real bug we've found through testing! It could be fixed
+  in our assembly source once we drop the byte-identical constraint.
 
 ### MCP function key numbering
 
