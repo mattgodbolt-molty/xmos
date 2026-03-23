@@ -338,7 +338,12 @@ The `os_fkey_buf` constant at &0480 in our source is something else
   is set (confirmed by watching memLook changes during `*STORE`).
 - HAZEL survives soft reset.
 
-**What doesn't work:**
+**Clarification from Rich TW (co-author):** `*STORE` preserves
+function keys across CTRL+BREAK (hard reset), not just BREAK.
+The MOS reinitialises ANDY on any reset, so function keys are always
+lost without `*STORE`.
+
+**What doesn't work in jsbeeb:**
 - After `*STORE`, the store buffer at &A655 contains ROM data (the
   copyright string "MG 1992") instead of ANDY data (the function key
   pointers and "HELLO"). The ANDY mapping appears correct in jsbeeb's

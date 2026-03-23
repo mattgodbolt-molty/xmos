@@ -125,11 +125,11 @@ from BASIC — produces the error `VAR works only in BASIC` otherwise.
 **`*L`** — Set up MODE 128 (shadow screen mode) with function key
 definitions for the editing environment.
 
-**`*STORE`** — Save your current XMOS configuration (aliases, key
-definitions, XON state) so it survives BREAK. Without `*STORE`,
-a reset reinitialises these to their defaults. The typical workflow
-is: set up your aliases and key mappings, then `*STORE` to keep
-them.
+**`*STORE`** — Save function key definitions so they survive
+CTRL+BREAK (hard reset). The MOS clears function key storage (ANDY)
+on any reset, so without `*STORE` your `*KEY` definitions are lost.
+The typical workflow is: set up your function keys, then `*STORE` to
+keep them across resets.
 
 ### Development Tools
 
