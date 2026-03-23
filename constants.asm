@@ -64,10 +64,6 @@ zp_src_hi    = &AF              \ Source pointer high
 
 
 
-\ History buffer workspace bytes
-xi_hist_term = &AE53            \ History entry terminator (set to &0D)
-xi_hist_flag = &AE54            \ History state flag (set to &FF when saving)
-
 \ --- OS workspace addresses ---
 keyv_lo      = &020A            \ Keyboard vector low byte
 keyv_hi      = &020B            \ Keyboard vector high byte
@@ -84,12 +80,6 @@ crtc_data    = &FE01            \ 6845 CRTC data register
 
 \ --- Default vectors ---
 default_keyv = &EF39            \ Default KEYV handler address
-
-\ --- STORE buffer pages (in sideways RAM) ---
-store_buf_0  = &A655            \ *STORE buffer for ROM page 0 (&8000-&80FF)
-store_buf_1  = &A755            \ *STORE buffer for ROM page 1 (&8100-&81FF)
-store_buf_2  = &A855            \ *STORE buffer for ROM page 2 (&8200-&82FF)
-store_buf_3  = &A55B            \ *STORE buffer for ROM page 3 (&8300-&83FF)
 
 \ --- More OS page 2 workspace ---
 os_himem_lo  = &020C            \ OS high water mark low byte
@@ -108,5 +98,3 @@ mode7_screen = &7C00            \ Start of MODE 7 screen memory
 
 \ --- Workspace outside ROM ---
 keyon_handler_dest = &D100      \ Destination for key remap handler copy
-alias_clear_flag = &B165        \ Alias clear marker
-alias_exec_buf = &A955          \ Alias execution buffer

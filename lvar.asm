@@ -234,10 +234,10 @@
 \ buffer and shifts the existing alias history down to make room.
 .xi_history_save
 {
-        LDA #&54
-        STA &AC
-        LDA #&ae
-        STA &AD
+        LDA #LO(xi_hist_flag)
+        STA zp_tmp_lo
+        LDA #HI(xi_hist_flag)
+        STA zp_tmp_hi
         INC xi_alias_count
         LDA xi_alias_count
         BNE inc_cursor
@@ -314,10 +314,10 @@
         DEC A
         STA xi_scroll_count
 .set_ptr
-        LDA #&55
-        STA &AE
-        LDA #&aa
-        STA &AF
+        LDA #LO(xi_hist_buffer)
+        STA zp_src_lo
+        LDA #HI(xi_hist_buffer)
+        STA zp_src_hi
         LDX xi_scroll_count
         BNE check_end
 .clear_and_load

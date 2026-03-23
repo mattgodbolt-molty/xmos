@@ -220,8 +220,8 @@
         STA keyon_handler_dest,X
         INX
         BNE loop
-        LDA #&00 : STA keyv_lo
-        LDA #&d1
+        LDA #LO(keyon_handler_dest) : STA keyv_lo
+        LDA #HI(keyon_handler_dest)
         STA keyv_hi
         RTS
 }

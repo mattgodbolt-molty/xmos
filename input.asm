@@ -790,9 +790,9 @@
 .xi_htab_check_quote
     LDA xi_quote_toggle
     BNE xi_htab_output_char
-    LDA #&55
+    LDA #LO(basic_keyword_table)
     STA zp_src_lo
-    LDA #&AE
+    LDA #HI(basic_keyword_table)
     STA zp_src_hi
 .xi_htab_keyword_loop
     LDY #&00
