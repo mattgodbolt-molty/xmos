@@ -125,14 +125,14 @@
         INY
         BRA parse_token
 .check_string
-        CMP #&22                \ skip over quoted string literals
+        CMP #'"'                \ skip over quoted string literals
         BNE lookup_token
 .string_loop
         INY
         LDA (zp_ptr_lo),Y
         CMP #&0d
         BEQ end_of_line
-        CMP #&22
+        CMP #'"'
         BNE string_loop
         INY
         BRA parse_token

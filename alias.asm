@@ -297,7 +297,7 @@
         CMP #'%'
         BEQ exec_expand
         DEX
-        CMP #&55
+        CMP #'U'
         BNE get_param_num
         JMP write_header
 \ %0-%9: Find the Nth space-delimited parameter from the original command line

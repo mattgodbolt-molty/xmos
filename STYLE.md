@@ -11,9 +11,24 @@
 ## Named constants
 - **Every address must have a name.** No raw hex addresses in instructions.
 - Zero page locations: use constants from `constants.asm` (`zp_ptr_lo`, `cmd_line_lo`, `rom_number`)
-- OS workspace: use constants (`keyv_lo`, `os_mode`, `os_escape_flag`)
+- OS workspace: use constants (`keyv_lo`, `saved_language_rom`, `os_escape_flag`)
 - ROM workspace variables: use labels at their actual location in the assembly
-- The only exceptions are self-modifying code targets (`&ffff`) and the absolute ZP encoding workarounds (`EQUB &AD, &F4, &00` for `LDA &00F4`)
+- **Address low/high bytes must use `LO(label)` / `HI(label)`**, never raw hex.
+  Write `LDA #LO(alias_buffer)` not `LDA #&65`.
+- The only exception is self-modifying code targets (`&ffff`) that get patched at runtime
+
+## Self-modifying code
+When patching an instruction's operand, reference the instruction's label with `+ 1` or `+ 2`:
+```
+.*patch_target
+    LDA #&00        \ patched at runtime
+    ...
+    STA patch_target + 1    \ write new operand
+```
+**Never** use large offsets from a function label (e.g. `STA my_func + &25`).
+These break silently if instructions are added or removed between the label
+and the patched instruction. Every patchable instruction must have its own
+`.*label` (global if patched from outside `{ }`).
 
 ## Strings
 - Use `EQUS` with inline byte values: `EQUS 13, "text", 0`

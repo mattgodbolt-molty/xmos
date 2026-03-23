@@ -7,8 +7,8 @@
 {
         PHA : PHX : PHY
         LDA rom_workspace_table,X  \ Get our ROM's workspace page
-        STA extended_input_code + &0F  \ Patch workspace high byte into handler
-        STX extended_input_code + &25  \ Patch ROM slot number into handler
+        STA xi_patch_workspace_hi + 1  \ Patch workspace high byte into handler
+        STX xi_patch_rom_slot + 1  \ Patch ROM slot number into handler
         STA zp_work_hi          \ Set up workspace pointer high
         STA os_himem_hi         \ Set OSHWM high byte
         LDA #&00
@@ -59,7 +59,8 @@
     PLA
     STX zp_src_lo
     STY zp_src_hi
-    LDA #&db
+.*xi_patch_workspace_hi
+    LDA #&db                    \ patched by handle_reset with workspace page
     STA zp_work_hi
     LDA #&e0
     STA zp_work_lo
@@ -71,7 +72,8 @@
     BPL xi_save_regs_loop
     LDA rom_number
     STA saved_language_rom
-    LDA #&07
+.*xi_patch_rom_slot
+    LDA #&07                    \ patched by handle_reset with actual ROM slot
     STA sheila_romsel
     STA rom_number
     JSR xi_check_xon
@@ -755,7 +757,7 @@
     STA xi_char
     CMP #&80
     BCS xi_htab_check_quote
-    CMP #&22
+    CMP #'"'
     BNE xi_htab_output_char
     LDA xi_quote_toggle
     EOR #&ff
