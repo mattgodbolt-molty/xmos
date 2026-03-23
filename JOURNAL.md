@@ -318,38 +318,33 @@ wrapper that sets `shift: true` for uppercase letters.
 `*STORE` help text says "Keeps function keys on break". The code
 (alias.asm lines 460-482) sets ROMSEL bit 7 (which maps &8000-&8FFF
 to ANDY — the Master's 4K private RAM) and copies &8000-&83FF to
-store buffers in HAZEL. On reset, `alias_init` copies them back.
+store buffers in HAZEL (&A655+). On reset, `alias_init` copies them
+back to ANDY.
 
-However, MOS function key definitions live at `os_fkey_buf` (&0480)
-— regular page 4 RAM, NOT in ANDY. So `*STORE` doesn't save function
-keys at all. Testing confirms: `*KEY 1 HELLO` + `*STORE` + soft
-reset = function key is lost.
+On the BBC Master, ANDY &8000-&83FF is the function key buffer (moved
+there from &0B00 on the BBC B to give a larger 990-byte buffer).
+The `os_fkey_buf` constant at &0480 in our source is something else
+— not the actual string storage.
 
-Findings:
-- ANDY &8000-&83FF IS the function key buffer on the Master (confirmed
-  by reading it after `*KEY 1 HELLO` — pointer tables and string data
-  visible at &8000-&8027).
-- `*STORE` correctly saves ANDY to HAZEL store buffers (confirmed by
-  reading store_buf_0 at &A655 — data matches ANDY contents).
-- HAZEL survives soft reset (store buffer data is identical before and
-  after BREAK).
-- But function keys are still lost after reset. Most likely the MOS
-  reinitialises ANDY AFTER alias_init has restored the data — the
-  service call &27 fires during the reset sequence, alias_init copies
-  the data back, then the MOS continues and overwrites ANDY with
-  fresh defaults.
-- The ifetch/data split theory was WRONG: ROMSEL bit 7 redirects
-  ALL accesses (both ifetch and data) to ANDY. This is correct
-  because `*STORE` code lives at &9346 (above the &8FFF ANDY range)
-  so instruction fetches still come from the ROM. Confirmed by
-  checking b2, BeebEm, and BBC Master documentation.
+**What we confirmed:**
+- ANDY contains the function key data (read directly from
+  ramRomOs[&8000] after `*KEY 1 HELLO` — pointer table at &8000-&8021,
+  string "HELLO" at &8022).
+- `*STORE` code is at &9346 (above the ANDY range &8000-&8FFF), so
+  it can safely set ROMSEL bit 7 without affecting its own instruction
+  fetches. ROMSEL bit 7 redirects ALL accesses to &8000-&8FFF
+  (confirmed by b2, BeebEm, and BBC Master documentation).
 - jsbeeb's romSelect correctly maps pages 128-143 to ANDY when bit 7
-  is set (confirmed by watching memLook changes during *STORE).
-- Despite this, the store buffer ends up with ROM data instead of
-  ANDY data. The root cause is still under investigation — the
-  mapping appears correct but reads from &8000 during the copy loop
-  return ROM bytes. Needs deeper debugging.
-- Needs verification on real hardware to confirm *STORE works there.
+  is set (confirmed by watching memLook changes during `*STORE`).
+- HAZEL survives soft reset.
+
+**What doesn't work:**
+- After `*STORE`, the store buffer at &A655 contains ROM data (the
+  copyright string "MG 1992") instead of ANDY data (the function key
+  pointers and "HELLO"). The ANDY mapping appears correct in jsbeeb's
+  internal state, but the data reads during the copy loop return ROM
+  bytes. Root cause unknown — needs deeper debugging or testing on
+  real hardware.
 
 ### MCP function key numbering
 
