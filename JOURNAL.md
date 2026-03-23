@@ -373,6 +373,59 @@ lost without `*STORE`.
 - This is a real latent bug in the original 1992 ROM, found through
   automated testing.
 
+## 2026-03-23: Reconciliation with Rich's disassembly
+
+Rich posted his own partial disassembly (GitHub issue #23). Careful
+comparison revealed several errors in our annotations:
+
+### Errors found and fixed
+
+**Swapped variables `xi_cursor_pos` / `xi_line_len`**: &8480 is the
+line length, &8481 is the cursor position. We had them backwards.
+Evidence: cursor left only decrements &8481 (the insertion point
+moves, the line doesn't shrink), and cursor right only increments
+&8481. Every reference in input.asm was affected.
+
+**`os_mode` is the saved ROM number, not screen mode**: &0230 stores
+which ROM was active when XMOS was called. `CMP #&0C` checks for
+BASIC (ROM slot 12 on the Master), not Mode 12. Renamed to
+`saved_language_rom`. All uses in input.asm, bau.asm, lvar.asm fixed.
+
+**`os_width_lo`/`os_width_hi` are window column positions**: &0308
+is the text window left column, &030A is the right column. Not
+low/high bytes of a width. Renamed to `os_win_left`/`os_win_right`.
+
+**Vague/inverted labels**: `xi_support_entry` → `xi_history_save`,
+`xi_supp_restore` → `xi_history_recall` (Rich identified these as
+command history buffer routines). `xi_null_not_empty` was inverted —
+it fires when the line IS empty.
+
+### Bugs in original code annotated
+
+1. **ROMSEL not restored on XON-disabled path**: when XON is off,
+   `xi_check_xon` JMPs to the default KEYV handler without returning
+   through the ROMSEL cleanup code. Rich noted this as a bug.
+2. **Dead code in COPY handler**: the BEQ after the second
+   length-cursor subtraction can never fire because equality was
+   already handled by the preceding CMP/BEQ.
+3. **Ctrl-N/Ctrl-O double-echo**: these fall through to
+   xi_handle_printable which echoes them again.
+
+### Pattern of errors
+
+The mistakes share common causes:
+- **Variables named from first encounter, not traced through all
+  paths**: xi_cursor_pos/xi_line_len were named based on how they
+  appeared in one context (insert), not verified against cursor
+  movement, delete, and clear.
+- **MOS workspace addresses assumed, not verified**: os_mode and
+  os_width_lo/hi were guessed from context rather than checked
+  against Master MOS documentation.
+- **Generic subroutine names**: xi_support_entry doesn't convey that
+  it's the history buffer save routine.
+
+Applied these lessons systematically across the codebase.
+
 ### MCP function key numbering
 
 MCP key name `F0` maps to BBC `f1` (i.e. `*KEY 1`). The numbering

@@ -70,13 +70,13 @@
     DEY
     BPL xi_save_regs_loop
     LDA rom_number
-    STA os_mode
+    STA saved_language_rom
     LDA #&07
     STA sheila_romsel
     STA rom_number
     JSR xi_check_xon
     PHP
-    LDA os_mode
+    LDA saved_language_rom
     STA sheila_romsel
     STA rom_number
     LDA #&00
@@ -84,6 +84,10 @@
     RTS
 \ If XON mode is not active, pass through to the default KEYV handler.
 \ Otherwise, enter the extended line editor.
+\ BUG: this JMPs to default_keyv without returning through the cleanup
+\ code that restores ROMSEL. The paging was changed at xi_osword0_entry
+\ and should be restored. The handler still works because it runs from
+\ RAM, but ROMSEL is left pointing at the XMOS slot.
 .xi_check_xon
     LDA xon_flag
     BNE xi_init_state
@@ -96,8 +100,8 @@
     LDA #&00
     STA xi_scroll_count
     LDA #&00
-    STA xi_cursor_pos
     STA xi_line_len
+    STA xi_cursor_pos
     TAY
     LDA (zp_work_lo),Y
     STA zp_ptr_lo
@@ -191,7 +195,7 @@
     BCC xi_check_buffer_full
     JMP xi_read_loop
 .xi_check_buffer_full
-    LDA xi_cursor_pos
+    LDA xi_line_len
     LDY #&02
     CMP (zp_work_lo),Y
     BNE xi_do_insert_setup
@@ -207,12 +211,12 @@
 \ Shifts characters after the cursor rightward, then redraws the tail.
 .xi_do_insert
     SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    LDA xi_line_len
+    SBC xi_cursor_pos
     PHA
     BEQ xi_write_char
     TAX
-    LDY xi_cursor_pos
+    LDY xi_line_len
     DEY
 .xi_shift_right_loop
     LDA (zp_ptr_lo),Y
@@ -223,12 +227,12 @@
     DEX
     BNE xi_shift_right_loop
 .xi_write_char
-    LDY xi_line_len
+    LDY xi_cursor_pos
     LDA xi_char
     JSR oswrch
     STA (zp_ptr_lo),Y
-    INC xi_line_len
     INC xi_cursor_pos
+    INC xi_line_len
     PLA
     BEQ xi_insert_done
     PHA
@@ -252,14 +256,14 @@
 \ If already at position 0, switch to scroll mode via cursor key reset.
 .xi_handle_left
 {
-        LDA xi_cursor_pos
+        LDA xi_line_len
         BNE no_scroll
         LDY #&8c
         JMP xi_reset_cursor_keys
 .no_scroll
-        LDA xi_line_len
+        LDA xi_cursor_pos
         BEQ done
-        DEC xi_line_len
+        DEC xi_cursor_pos
         LDA #&08
         JSR oswrch
 .done
@@ -269,15 +273,15 @@
 \ If already at position 0, switch to scroll mode via cursor key reset.
 .xi_handle_right
 {
-        LDA xi_cursor_pos
+        LDA xi_line_len
         BNE no_scroll
         LDY #&8d
         JMP xi_reset_cursor_keys
 .no_scroll
-        LDA xi_line_len
-        CMP xi_cursor_pos
+        LDA xi_cursor_pos
+        CMP xi_line_len
         BEQ done
-        INC xi_line_len
+        INC xi_cursor_pos
         LDA #&09
         JSR oswrch
 .done
@@ -287,15 +291,15 @@
 \ left, and redraw the line tail with trailing space to erase the last char.
 .xi_handle_delete
 {
-        LDA xi_line_len
+        LDA xi_cursor_pos
         BEQ done
         SEC
-        LDA xi_cursor_pos
-        SBC xi_line_len
+        LDA xi_line_len
+        SBC xi_cursor_pos
         PHA
         BEQ do_delete
         TAX
-        LDY xi_line_len
+        LDY xi_cursor_pos
 .shift_loop
         LDA (zp_ptr_lo),Y
         DEY
@@ -307,9 +311,9 @@
 .do_delete
         LDA #&7f
         JSR oswrch
-        DEC xi_line_len
         DEC xi_cursor_pos
-        LDY xi_line_len
+        DEC xi_line_len
+        LDY xi_cursor_pos
         PLA
         BEQ done
         PHA
@@ -338,16 +342,16 @@
 \ Moves the cursor to end-of-line, stores CR terminator, and exits.
 .xi_handle_cr
     LDA xon_flag
-    BEQ xi_cr_check_mode
+    BEQ xi_cr_check_basic
     LDA #&04
     LDX #&01
     LDY #&00
     JSR osbyte
-.xi_cr_check_mode
-    LDA os_mode
+.xi_cr_check_basic
+    LDA saved_language_rom
     CMP #&0c
     BNE xi_cr_normal
-    LDA xi_cursor_pos
+    LDA xi_line_len
     CMP #&04
     BNE xi_cr_normal
     LDY #&03
@@ -358,20 +362,20 @@
     DEY
     BPL xi_cr_check_save
     JSR osnewl
-    LDA os_mode
+    LDA saved_language_rom
     PHA
     JSR cmd_s
     LDA #&0d
     STA (zp_ptr_lo)
     LDY #&00
     PLA
-    STA os_mode
+    STA saved_language_rom
     CLC
     RTS
 .xi_cr_normal
     SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    LDA xi_line_len
+    SBC xi_cursor_pos
     BEQ xi_cr_finish
     TAX
 .xi_cr_fwd_loop
@@ -380,8 +384,8 @@
     DEX
     BNE xi_cr_fwd_loop
 .xi_cr_finish
-    JSR xi_support_entry
-    LDY xi_cursor_pos
+    JSR xi_history_save
+    LDY xi_line_len
     LDA #&0d
     STA (zp_ptr_lo),Y
     JSR osnewl
@@ -398,8 +402,8 @@
     LDY #&00
     JSR osbyte
     SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    LDA xi_line_len
+    SBC xi_cursor_pos
     BEQ xi_cr_sec_return
     TAX
 .xi_cr_fwd_loop2
@@ -408,7 +412,7 @@
     DEX
     BNE xi_cr_fwd_loop2
 .xi_cr_sec_return
-    LDY xi_cursor_pos
+    LDY xi_line_len
     SEC
     RTS
 \ Ctrl-U: clear the entire input line by deleting all characters.
@@ -419,11 +423,11 @@
 \ then issuing delete for each character. Resets line_len and cursor_pos.
 .xi_do_clear
 {
-        LDA xi_cursor_pos
+        LDA xi_line_len
         BEQ done
         SEC
-        LDA xi_cursor_pos
-        SBC xi_line_len
+        LDA xi_line_len
+        SBC xi_cursor_pos
         BEQ del_loop
         TAX
 .fwd_loop
@@ -432,25 +436,25 @@
         DEX
         BNE fwd_loop
 .del_loop
-        LDX xi_cursor_pos
+        LDX xi_line_len
 .del_char
         LDA #&7f
         JSR oswrch
         DEX
         BNE del_char
         LDA #&00
-        STA xi_line_len
         STA xi_cursor_pos
+        STA xi_line_len
 .done
         RTS
 }
 \ Null character (Ctrl-@): if the line is empty, turn off XON mode
 \ and return an empty line terminated with CR.
 .xi_handle_null
-    LDA xi_cursor_pos
-    BEQ xi_null_not_empty
+    LDA xi_line_len
+    BEQ xi_null_line_empty
     JMP xi_read_loop
-.xi_null_not_empty
+.xi_null_line_empty
     JSR cmd_xoff
     JSR osnewl
     LDY #&00
@@ -474,36 +478,36 @@
     BNE xi_copy_up_inc
     LDA #&ff
     STA xi_insert_mode
-    LDA xi_cursor_pos
+    LDA xi_line_len
     BEQ xi_copy_up_jmp
-    JSR xi_support_entry
+    JSR xi_history_save
 .xi_copy_up_inc
     INC xi_scroll_count
 .xi_copy_up_jmp
-    JMP xi_supp_restore
+    JMP xi_history_recall
 .xi_copy_up_has_key
-    LDA xi_cursor_pos
+    LDA xi_line_len
     BNE xi_copy_up_calc
     LDY #&8f
     JMP xi_reset_cursor_keys
 .xi_copy_up_calc
     SEC
-    LDA os_width_hi
-    SBC os_width_lo
+    LDA os_win_right
+    SBC os_win_left
     CLC
     ADC #&01
     STA xi_char
     SEC
-    LDA xi_line_len
+    LDA xi_cursor_pos
     SBC xi_char
     BCC xi_copy_up_clear
-    STA xi_line_len
+    STA xi_cursor_pos
     LDA #&0b
     JSR oswrch
 .xi_copy_up_done
     JMP xi_read_loop
 .xi_copy_up_clear
-    LDX xi_line_len
+    LDX xi_cursor_pos
     BEQ xi_copy_up_done
 .xi_copy_up_bs_loop
     LDA #&08
@@ -511,7 +515,7 @@
     DEX
     BNE xi_copy_up_bs_loop
     LDA #&00
-    STA xi_line_len
+    STA xi_cursor_pos
     JMP xi_read_loop
 \ Copy-down (cursor down in copy mode): if no key is pending, enter
 \ insert/scroll mode and scroll down. If a key is pending, move the
@@ -529,34 +533,34 @@
     BNE xi_copy_down_dec
     LDA #&ff
     STA xi_insert_mode
-    JSR xi_support_entry
+    JSR xi_history_save
 .xi_copy_down_dec
     DEC xi_scroll_count
-    JMP xi_supp_restore
+    JMP xi_history_recall
 .xi_copy_down_has_key
-    LDA xi_cursor_pos
+    LDA xi_line_len
     BNE xi_copy_down_calc
     LDY #&8e
     JMP xi_reset_cursor_keys
 .xi_copy_down_calc
     SEC
-    LDA os_width_hi
-    SBC os_width_lo
+    LDA os_win_right
+    SBC os_win_left
     CLC
     ADC #&01
     CLC
-    ADC xi_line_len
+    ADC xi_cursor_pos
     BCS xi_copy_down_truncate
-    CMP xi_cursor_pos
+    CMP xi_line_len
     BCS xi_copy_down_truncate
-    STA xi_line_len
+    STA xi_cursor_pos
     LDA #&0a
     JSR oswrch
     JMP xi_read_loop
 .xi_copy_down_truncate
     SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    LDA xi_line_len
+    SBC xi_cursor_pos
     BEQ xi_copy_down_set_pos
     TAX
 .xi_copy_down_fwd_loop
@@ -565,8 +569,8 @@
     DEX
     BNE xi_copy_down_fwd_loop
 .xi_copy_down_set_pos
-    LDA xi_cursor_pos
-    STA xi_line_len
+    LDA xi_line_len
+    STA xi_cursor_pos
     JMP xi_read_loop
 \ Temporarily disable cursor editing mode and re-inject a cursor key,
 \ allowing normal screen-level cursor movement for one keypress.
@@ -585,16 +589,16 @@
 \ by shifting remaining characters left and redrawing. Used for
 \ character-at-a-time deletion during copy editing.
 .xi_handle_tab
-    LDA xi_cursor_pos
-    CMP xi_line_len
+    LDA xi_line_len
+    CMP xi_cursor_pos
     BEQ xi_tab_done
-    SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    SEC                         \ BUG: this subtraction repeats the
+    LDA xi_line_len             \ equality test above, so the BEQ
+    SBC xi_cursor_pos           \ can never fire — dead code.
     PHA
     BEQ xi_tab_update_pos
     TAX
-    LDY xi_line_len
+    LDY xi_cursor_pos
     INY
 .xi_tab_shift_loop
     LDA (zp_ptr_lo),Y
@@ -605,8 +609,8 @@
     DEX
     BNE xi_tab_shift_loop
 .xi_tab_update_pos
-    DEC xi_cursor_pos
-    LDY xi_line_len
+    DEC xi_line_len
+    LDY xi_cursor_pos
     PLA
     BEQ xi_tab_done
     TAX
@@ -641,14 +645,14 @@
 \ the current input, look up the corresponding BASIC program line, and
 \ expand its tokenised content into the input buffer for editing.
 .xi_handle_htab
-    LDA xi_cursor_pos
+    LDA xi_line_len
     BEQ xi_tab_finished
-    LDA os_mode
+    LDA saved_language_rom
     CMP #&0c
     BNE xi_tab_finished
     SEC
-    LDA xi_cursor_pos
-    SBC xi_line_len
+    LDA xi_line_len
+    SBC xi_cursor_pos
     BEQ xi_htab_set_pos
     TAX
 .xi_htab_fwd_loop
@@ -657,8 +661,8 @@
     DEX
     BNE xi_htab_fwd_loop
 .xi_htab_set_pos
-    LDA xi_cursor_pos
-    STA xi_line_len
+    LDA xi_line_len
+    STA xi_cursor_pos
     LDY #&00
     STY xi_char
     STY xi_temp
@@ -671,7 +675,7 @@
     JMP xi_htab_mul10
 .xi_htab_skip_nondigit
     INY
-    CPY xi_cursor_pos
+    CPY xi_line_len
     BEQ xi_tab_finished
     BNE xi_htab_parse_loop
 \ Multiply the accumulated number by 10 and add the current digit.
@@ -708,12 +712,12 @@
     BCC xi_htab_lookup
     CMP #':'
     BCS xi_htab_lookup
-    CPY xi_cursor_pos
+    CPY xi_line_len
     BNE xi_htab_mul10
 \ Walk the BASIC program's linked list to find the line matching
 \ the parsed number, then expand its tokens into the input buffer.
 .xi_htab_lookup
-    LDY xi_cursor_pos
+    LDY xi_line_len
     LDA #&00
     STA zp_tmp_lo
     LDA basic_page_hi
