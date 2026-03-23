@@ -6,8 +6,7 @@ describe("*DIS", () => {
         const machine = await bootWithXmos();
         const getOutput = captureOutput(machine);
 
-        // DIS shows one line then waits for a keypress
-        await typeText(machine,"*DIS 802B");
+        await typeText(machine, "*DIS 802B");
         await machine.runFor(4_000_000);
 
         const output = getOutput();
@@ -17,32 +16,57 @@ describe("*DIS", () => {
         expect(output).toContain("C9 04");
     });
 
-    it("should show multiple lines when space is held", async () => {
-        const machine = await bootWithXmos();
-        const getOutput = captureOutput(machine);
-
-        await typeText(machine,"*DIS 802B");
-        // Hold space to scroll through multiple lines
-        machine.processor.sysvia.keyDown(32); // SPACE
-        await machine.runFor(8_000_000);
-        machine.processor.sysvia.keyUp(32);
-
-        const output = getOutput();
-        // Should have advanced past &802B
-        expect(output).toContain("802B");
-        expect(output).toContain("802D");
-    });
-
     it("should show JMP at &8003 (service entry jump)", async () => {
         const machine = await bootWithXmos();
         const getOutput = captureOutput(machine);
 
-        await typeText(machine,"*DIS 8003");
+        await typeText(machine, "*DIS 8003");
         await machine.runFor(4_000_000);
 
         const output = getOutput();
         expect(output).toContain("8003");
         expect(output).toContain("JMP &802B");
         expect(output).toContain("4C 2B 80");
+    });
+
+    it("should show multiple lines when space is held", async () => {
+        const machine = await bootWithXmos();
+        const getOutput = captureOutput(machine);
+
+        await typeText(machine, "*DIS 802B");
+        // Hold space to scroll through multiple lines
+        machine.processor.sysvia.keyDown(32); // SPACE
+        await machine.runFor(8_000_000);
+        machine.processor.sysvia.keyUp(32);
+
+        const output = getOutput();
+        // Should have advanced past &802B to show several instructions
+        expect(output).toContain("802B");
+        expect(output).toContain("802D");
+    });
+
+    it("should disassemble zero page as BRK instructions", async () => {
+        const machine = await bootWithXmos();
+        const getOutput = captureOutput(machine);
+
+        // Zero page will contain whatever values are there, but &00 = BRK
+        await typeText(machine, "*DIS 0000");
+        await machine.runFor(4_000_000);
+
+        const output = getOutput();
+        expect(output).toContain("0000");
+    });
+
+    it("should disassemble MOS code at high addresses", async () => {
+        const machine = await bootWithXmos();
+        const getOutput = captureOutput(machine);
+
+        // &FFE3 is OSASCI — CMP #&0D (check for carriage return)
+        await typeText(machine, "*DIS FFE3");
+        await machine.runFor(4_000_000);
+
+        const output = getOutput();
+        expect(output).toContain("FFE3");
+        expect(output).toContain("CMP #&0D");
     });
 });

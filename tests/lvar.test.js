@@ -29,4 +29,12 @@ describe("*LVAR", () => {
         // But the real variable should be listed
         expect(output).toContain("SCORE");
     });
+
+    it("should list array variables", async () => {
+        const machine = await bootWithXmos();
+        await runCommand(machine, "DIM D(10)");
+        const output = await runCommand(machine, "*LVAR");
+
+        expect(output).toContain("D(");
+    });
 });

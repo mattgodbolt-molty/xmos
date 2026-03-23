@@ -64,6 +64,75 @@ describe("*XON / *XOFF — extended input", () => {
         expect(output).toContain("REM EXTRA");
     });
 
+    it("with XON, left arrow then typing should insert before end", async () => {
+        await runCommand(machine, "*XON");
+
+        const getOutput = captureOutput(machine);
+        // Recall line 10, press left arrow, then type X
+        await typeText(machine, "10\t");
+        await machine.runFor(2_000_000);
+        // Press left arrow
+        machine.processor.sysvia.keyDown(37);
+        await machine.runFor(80000);
+        machine.processor.sysvia.keyUp(37);
+        await machine.runFor(80000);
+        // Type X — should insert before the last character
+        await typeText(machine, "X");
+        await machine.runFor(2_000_000);
+
+        const output = getOutput();
+        // X should appear before the closing quote
+        expect(output).toContain("X");
+        expect(output).toContain("HELLO");
+    });
+
+    it("with XON, COPY key should delete character under cursor", async () => {
+        await runCommand(machine, "*XON");
+
+        // Recall line 10
+        await typeText(machine, "10\t");
+        await machine.runFor(2_000_000);
+        // Press COPY (END key = 35) — should delete character at cursor
+        machine.processor.sysvia.keyDown(35);
+        await machine.runFor(80000);
+        machine.processor.sysvia.keyUp(35);
+        await machine.runFor(80000);
+
+        // Submit the modified line and LIST to see the result
+        const getOutput = captureOutput(machine);
+        await typeText(machine, "");
+        await machine.runFor(4_000_000);
+        await typeText(machine, "LIST");
+        await machine.runFor(4_000_000);
+
+        const output = getOutput();
+        // One character should be deleted from the line
+        expect(output).toContain("PRINT");
+    });
+
+    it("with XON, Ctrl-U should clear the current line", async () => {
+        await runCommand(machine, "*XON");
+
+        // Start typing something
+        const getOutput = captureOutput(machine);
+        await typeText(machine, "PRINT 42");
+        await machine.runFor(2_000_000);
+        // Press Ctrl-U (character code 21, keycode for U=85 with CTRL)
+        machine.processor.sysvia.keyDown(17); // CTRL
+        machine.processor.sysvia.keyDown(85); // U
+        await machine.runFor(80000);
+        machine.processor.sysvia.keyUp(85);
+        machine.processor.sysvia.keyUp(17);
+        await machine.runFor(2_000_000);
+        // Now type something else and submit
+        await typeText(machine, "PRINT 99");
+        await machine.runFor(4_000_000);
+
+        const output = getOutput();
+        // Should see 99, not 42 (line was cleared before retyping)
+        expect(output).toContain("99");
+    });
+
     it("*XOFF should disable TAB recall", async () => {
         await runCommand(machine, "*XON");
         await runCommand(machine, "*XOFF");
@@ -93,6 +162,21 @@ describe("*KEYON / *KEYOFF / *KSTATUS", () => {
 
     it("*KSTATUS should report off by default", async () => {
         const machine = await bootWithXmos();
+        const output = await runCommand(machine, "*KSTATUS");
+        expect(output).toBe("Redefined keys off>");
+    });
+
+    it("*KEYON twice should warn already executed", async () => {
+        const machine = await bootWithXmos();
+        await runCommand(machine, "*KEYON");
+        const output = await runCommand(machine, "*KEYON");
+        expect(output).toContain("already executed");
+    });
+
+    it("*KSTATUS after *KEYON then *KEYOFF should report off", async () => {
+        const machine = await bootWithXmos();
+        await runCommand(machine, "*KEYON");
+        await runCommand(machine, "*KEYOFF");
         const output = await runCommand(machine, "*KSTATUS");
         expect(output).toBe("Redefined keys off>");
     });

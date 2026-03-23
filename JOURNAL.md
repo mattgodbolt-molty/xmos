@@ -313,6 +313,72 @@ wrapper that sets `shift: true` for uppercase letters.
 - `lvar.test.js` — empty list, heap vs integer variables
 - `bau.test.js` — *BAU line splitting, *SPACE keyword spacing
 
+### *STORE investigation (ongoing)
+
+`*STORE` help text says "Keeps function keys on break". The code
+(alias.asm lines 460-482) sets ROMSEL bit 7 (which maps &8000-&8FFF
+to ANDY — the Master's 4K private RAM) and copies &8000-&83FF to
+store buffers in HAZEL (&A655+). On reset, `alias_init` copies them
+back to ANDY.
+
+On the BBC Master, ANDY &8000-&83FF is the function key buffer (moved
+there from &0B00 on the BBC B to give a larger 990-byte buffer).
+The `os_fkey_buf` constant at &0480 in our source is something else
+— not the actual string storage.
+
+**What we confirmed:**
+- ANDY contains the function key data (read directly from
+  ramRomOs[&8000] after `*KEY 1 HELLO` — pointer table at &8000-&8021,
+  string "HELLO" at &8022).
+- `*STORE` code is at &9346 (above the ANDY range &8000-&8FFF), so
+  it can safely set ROMSEL bit 7 without affecting its own instruction
+  fetches. ROMSEL bit 7 redirects ALL accesses to &8000-&8FFF
+  (confirmed by b2, BeebEm, and BBC Master documentation).
+- jsbeeb's romSelect correctly maps pages 128-143 to ANDY when bit 7
+  is set (confirmed by watching memLook changes during `*STORE`).
+- HAZEL survives soft reset.
+
+**Clarification from Rich TW (co-author):** `*STORE` preserves
+function keys across CTRL+BREAK (hard reset), not just BREAK.
+The MOS reinitialises ANDY on any reset, so function keys are always
+lost without `*STORE`.
+
+**What doesn't work in our test:**
+- After `*STORE`, the store buffer at &A655 is all zeros — `*STORE`
+  doesn't appear to write anything. But `*STORE` works correctly in
+  the browser version of jsbeeb (confirmed by Matt). So the bug is
+  in our test setup, not in jsbeeb itself.
+- The store buffers live in SWRAM (inside the XMOS ROM's own sideways
+  RAM slot), not in HAZEL as previously assumed. With ROMSEL = 0x87
+  during *STORE, &A655 maps to slot 7 SWRAM which is writable.
+- CTRL+BREAK in the test is simulated by holding CTRL during
+  `processor.reset(false)`, but `bootWithXmos()` uses
+  `processor.reset(true)` (power-on reset) to get the MOS to
+  recognise the ROM — this wipes all RAM. Something about this
+  sequence may be leaving the environment in a state where *STORE
+  doesn't work.
+- **Root cause found:** `*STORE` sets ROMSEL bit 7 via &FE30 to
+  page in ANDY, but never updates the &F4 shadow copy. If any
+  interrupt fires during the copy loop (~8192 cycles, against a
+  10000-cycle timer interval), the MOS interrupt handler restores
+  ROMSEL from &F4 (without bit 7), unpaging ANDY. The rest of the
+  copy reads ROM data instead of function key data. Confirmed by
+  tracing: at X=0, ROMSEL is &87 and reads ANDY; at X=&22, ROMSEL
+  has been reset to &07 by an interrupt.
+- Fix: write to &F4 before &FE30, as the rest of XMOS already does
+  (e.g. input.asm updates both when switching banks). Rich TW
+  confirmed this is the correct fix.
+- Confirmed by patching the &FE30 write to also update &F4 — with
+  the fix, `*STORE` + CTRL+BREAK correctly preserves function keys.
+- This is a real latent bug in the original 1992 ROM, found through
+  automated testing.
+
+### MCP function key numbering
+
+MCP key name `F0` maps to BBC `f1` (i.e. `*KEY 1`). The numbering
+is offset by one because the BBC has `f0` (which maps to PC's F1
+internally in jsbeeb's key tables).
+
 ### CI and pre-commit
 - `npm test` runs as a pre-commit hook alongside beebasm-fmt and check.sh
 - GitHub Actions CI runs both `check.sh` (ROM verification) and `npm test`

@@ -80,6 +80,51 @@ export async function typeText(machine, text) {
 }
 
 /**
+ * Mode 7 teletext colour names (control codes &00-&07 set alpha colour).
+ */
+const MODE7_COLOURS = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+
+/**
+ * Read Mode 7 screen memory (&7C00, 40×25) and return it as an array
+ * of 25 strings (plain text, control codes replaced with spaces).
+ */
+export function readMode7Screen(machine) {
+    return readMode7ScreenRich(machine).map((row) => row.map((c) => c.ch).join("").trimEnd());
+}
+
+/**
+ * Read Mode 7 screen and return rich data: an array of 25 rows, each
+ * an array of 40 { ch, fg } objects. Interprets teletext control codes
+ * minimally: &01-&07 set foreground alpha colour, &10-&17 set foreground
+ * graphics colour. All control codes render as a space character.
+ */
+export function readMode7ScreenRich(machine) {
+    const rows = [];
+    for (let row = 0; row < 25; row++) {
+        let fg = "white";
+        const cols = [];
+        for (let col = 0; col < 40; col++) {
+            // Mode 7 ignores bit 7 — strip it for control code detection
+            const raw = machine.readbyte(0x7c00 + row * 40 + col);
+            const byte = raw & 0x7f;
+            if (byte >= 0x01 && byte <= 0x07) {
+                fg = MODE7_COLOURS[byte];
+                cols.push({ ch: " ", fg });
+            } else if (byte >= 0x10 && byte <= 0x17) {
+                fg = MODE7_COLOURS[byte - 0x10];
+                cols.push({ ch: " ", fg });
+            } else if (byte >= 0x20 && byte < 0x7f) {
+                cols.push({ ch: String.fromCharCode(byte), fg });
+            } else {
+                cols.push({ ch: " ", fg });
+            }
+        }
+        rows.push(cols);
+    }
+    return rows;
+}
+
+/**
  * Install a text capture hook that intercepts characters at WRCHV.
  * Re-reads WRCHV on every instruction so it stays correct even if
  * the vector changes. Collects only printable ASCII (0x20-0x7E).

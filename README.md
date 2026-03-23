@@ -9,15 +9,31 @@ Matt (and Claude).
 ## What is XMOS?
 
 XMOS is a sideways ROM for the BBC Master that adds a collection of utility
-commands and an extended line editing mode. It provides:
+commands and an extended line editing mode:
 
-- **Command aliases** — define shorthand names for frequently used commands
-- **Key redefinition** — remap the keyboard layout
-- **Extended line editing** — cursor-based editing with insert/delete
-- **BASIC utilities** — save with incore name, list variables, insert spaces
-- **A built-in 6502 disassembler** and **memory editor**
+- **Extended input** (`*XON`) — cursor-based line editing with insert/delete,
+  input history via SHIFT-Up/Down, and TAB to recall BASIC lines by number
+- **Command aliases** (`*ALIAS`) — define shorthand names that type out their
+  expansion at the prompt, with `%0`-`%9` parameter substitution
+- **Key redefinition** (`*KEYON`/`*DEFKEYS`) — remap cursor and fire keys
+- **BASIC utilities** — `*S` saves with an incore filename from `REM >`,
+  `*BAU` splits multi-statement lines, `*SPACE` adds keyword spacing,
+  `*LVAR` lists variable names
+- **Development tools** — `*DIS` disassembles 6502 code, `*MEM` is a
+  hex/ASCII memory editor
 
-See [USAGE.md](USAGE.md) for full command documentation.
+See [USAGE.md](USAGE.md) for the full command reference and user guide.
+
+## Quick start
+
+Load the ROM into sideways RAM and press CTRL+BREAK:
+
+```
+*SRLOAD XMOS 8000 7Q
+```
+
+Then type `*HELP XMOS` to see all commands, or `*XON` to enable
+extended input mode.
 
 ## Building
 
@@ -25,9 +41,10 @@ Requires [beebasm](https://github.com/stardot/beebasm) on your PATH.
 
 ```bash
 ./check.sh          # Assemble and verify against original ROM
+npm test            # Run automated tests (requires Node.js)
 ```
 
-This assembles `xmos.asm` into `build.rom` and compares it byte-for-byte
+`check.sh` assembles `xmos.asm` into `build.rom` and compares it byte-for-byte
 against `original.rom`. The build must always match.
 
 ## Project structure
@@ -57,12 +74,11 @@ against `original.rom`. The build must always match.
 | `original.ssd` | Original BBC Micro disc image |
 | `original.rom` | Extracted 16KB ROM binary |
 | `check.sh` | Build and verify script |
-| `disassemble.py` | Python script that generated the initial disassembly (historical) |
-| `dis65c02.py` | Custom 65C02 disassembler (handles BRK as 1 byte) |
+| `USAGE.md` | Full command reference and user guide |
 | `JOURNAL.md` | Reverse engineering notes and discoveries |
-| `USAGE.md` | Command documentation |
+| `TESTING_PLAN.md` | Test infrastructure and jsbeeb improvement notes |
 
 ## Reverse engineering status
 
 The ROM is fully disassembled and assembles to a byte-identical copy of the
-original. Annotation is ongoing — see [JOURNAL.md](JOURNAL.md) for progress.
+original. See [JOURNAL.md](JOURNAL.md) for detailed notes.
