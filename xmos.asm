@@ -369,10 +369,10 @@ GUARD &C000
 \ Initial values here are the defaults set after the ROM is first loaded.
 .xon_flag
     EQUB &FF                    \ non-zero = extended input (XON) is active
-.xi_cursor_pos
-    EQUB &1A                    \ cursor position within the current input line
 .xi_line_len
     EQUB &1A                    \ total length of the current input line
+.xi_cursor_pos
+    EQUB &1A                    \ insertion point within the current input line
 .xi_char
     EQUB &0D                    \ last character read during input processing
 .xi_temp

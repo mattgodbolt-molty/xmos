@@ -6,7 +6,7 @@
 \ token is "." (assembler directive). After splitting, falls through to *SPACE.
 .cmd_bau
 {
-        LDA os_mode
+        LDA saved_language_rom
         CMP #&0c
         BEQ splitting
         JSR copy_inline_to_stack  \ BRK error: "BAU must be called from BASIC"
@@ -208,7 +208,7 @@
 \ Also handles "[" brackets by dispatching to the assembler-block formatter.
 .cmd_space
 {
-        LDA os_mode
+        LDA saved_language_rom
         CMP #&0c
         BEQ setup
         JSR copy_inline_to_stack  \ BRK error: "Must be called from BASIC!"

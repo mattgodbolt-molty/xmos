@@ -8,7 +8,7 @@
 \ null-terminated name starting at offset 2.
 .cmd_lvar
 {
-        LDA os_mode
+        LDA saved_language_rom
         CMP #&0c
         BEQ start
         JSR copy_inline_to_stack  \ BRK error: "VAR works only in BASIC"
@@ -232,7 +232,7 @@
 }
 \ XI alias history support: copies the current command line into the alias
 \ buffer and shifts the existing alias history down to make room.
-.xi_support_entry
+.xi_history_save
 {
         LDA #&54
         STA &AC
@@ -244,15 +244,15 @@
         LDA #&ff
         STA xi_alias_count
 .inc_cursor
-        INC xi_cursor_pos
+        INC xi_line_len
         SEC
         LDA &AC
-        SBC xi_cursor_pos
+        SBC xi_line_len
         STA &AE
         LDA &AD
         SBC #&00
         STA &AF
-        DEC xi_cursor_pos
+        DEC xi_line_len
         LDA #&0d
         STA alias_end_lo
         LDA #&ff
@@ -280,14 +280,14 @@
         LDA &AF
         CMP #&aa
         BNE copy_loop
-        LDY xi_cursor_pos
+        LDY xi_line_len
         BEQ save_cr
         LDY #&00
 .save_loop
         LDA (zp_ptr_lo),Y
         STA alias_buffer,Y
         INY
-        CPY xi_cursor_pos
+        CPY xi_line_len
         BNE save_loop
 .save_cr
         LDA #&0d
@@ -298,7 +298,7 @@
     EQUB &A6
 \ XI alias restore: retrieves a previously stored command line from the
 \ alias history buffer, scrolling through entries by index.
-.xi_supp_restore
+.xi_history_recall
 {
         LDA #&0D
         STA alias_end_hi
@@ -350,7 +350,7 @@
         BNE check_loop
         LDA #&00
         STA xi_scroll_count
-        JMP xi_supp_restore
+        JMP xi_history_recall
 .advance
         INY
         TYA
@@ -369,7 +369,7 @@
         BCC check_end
         LDA #&00
         STA xi_scroll_count
-        JMP xi_supp_restore
+        JMP xi_history_recall
 }
 \ token_classify — identifies assembler-context tokens and sets lvar_indent
 \ to indicate how many operand bytes to skip past.

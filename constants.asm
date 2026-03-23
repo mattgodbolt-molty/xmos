@@ -71,11 +71,11 @@ alias_end_hi = &AE54
 \ --- OS workspace addresses ---
 keyv_lo      = &020A            \ Keyboard vector low byte
 keyv_hi      = &020B            \ Keyboard vector high byte
-os_mode      = &0230            \ Current screen mode
+saved_language_rom = &0230      \ Saved ROM number of the active language (e.g. &0C = BASIC)
 os_escape_flag = &026A          \ Escape flag (bit 7 set = escape pressed)
 os_wrch_dest = &027D            \ VDU driver destination
-os_width_lo  = &0308            \ Text window left column
-os_width_hi  = &030A            \ Text window right column
+os_win_left  = &0308            \ Text window left column
+os_win_right = &030A            \ Text window right column
 os_disp_addr = &0255            \ Display start address?
 
 \ --- Hardware registers ---
