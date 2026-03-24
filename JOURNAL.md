@@ -426,6 +426,33 @@ The mistakes share common causes:
 
 Applied these lessons systematically across the codebase.
 
+## 2026-03-23: Style cleanup pass
+
+### Named all addresses
+Every raw hex address in instruction operands replaced with named
+constants or `LO(label)`/`HI(label)`. BASIC ZP locations verified
+against BBC BASIC IV documentation (mdfs.net):
+- &00/&01 = LOMEM, &02/&03 = VARTOP, &12/&13 = TOP
+- &18 = PAGE hi, &1F = LISTO (was incorrectly basic_flags)
+- &EC = os_last_key, &FF = os_escape_effect
+
+### Workspace overlay
+Added a post-SAVE `CLEAR` + `ORG` + `SKIP` overlay in xmos.asm
+that defines labels for the entire runtime workspace region without
+changing the binary. Store buffers, alias expansion buffer, command
+history buffer, and alias table sentinel all have proper labels.
+
+### Instruction compaction
+All logically-related instruction pairs compacted per STYLE.md:
+- LDA/STA pointer setup, constant init, variable copies
+- ASL/ROL shift chains, CLC/ADC carry chains
+- PHX/PHY push sequences, SEC/SBC subtract chains
+- Net reduction of ~300 lines across all files
+
+### Style guide updates
+- Added `LO(label)`/`HI(label)` rule for address bytes
+- Added self-modifying code anchoring rule (`.*label` + `+ 1`)
+
 ### MCP function key numbering
 
 MCP key name `F0` maps to BBC `f1` (i.e. `*KEY 1`). The numbering
