@@ -125,14 +125,14 @@
         INY
         BRA parse_token
 .check_string
-        CMP #&22                \ skip over quoted string literals
+        CMP #'"'                \ skip over quoted string literals
         BNE lookup_token
 .string_loop
         INY
         LDA (zp_ptr_lo),Y
         CMP #&0d
         BEQ end_of_line
-        CMP #&22
+        CMP #'"'
         BNE string_loop
         INY
         BRA parse_token
@@ -234,10 +234,10 @@
 \ buffer and shifts the existing alias history down to make room.
 .xi_history_save
 {
-        LDA #&54
-        STA &AC
-        LDA #&ae
-        STA &AD
+        LDA #LO(xi_hist_flag)
+        STA zp_tmp_lo
+        LDA #HI(xi_hist_flag)
+        STA zp_tmp_hi
         INC xi_alias_count
         LDA xi_alias_count
         BNE inc_cursor
@@ -254,9 +254,9 @@
         STA &AF
         DEC xi_line_len
         LDA #&0d
-        STA alias_end_lo
+        STA xi_hist_term
         LDA #&ff
-        STA alias_end_hi
+        STA xi_hist_flag
 .copy_loop
         LDA (zp_src_lo)
         STA (zp_tmp_lo)
@@ -301,7 +301,7 @@
 .xi_history_recall
 {
         LDA #&0D
-        STA alias_end_hi
+        STA xi_hist_flag
         LDA xi_scroll_count
         CMP #&FF
         BNE check_count
@@ -314,10 +314,10 @@
         DEC A
         STA xi_scroll_count
 .set_ptr
-        LDA #&55
-        STA &AE
-        LDA #&aa
-        STA &AF
+        LDA #LO(xi_hist_buffer)
+        STA zp_src_lo
+        LDA #HI(xi_hist_buffer)
+        STA zp_src_hi
         LDX xi_scroll_count
         BNE check_end
 .clear_and_load

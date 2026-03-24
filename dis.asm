@@ -84,9 +84,9 @@
     LDA (zp_src_lo),Y           \ opcode × 4 to get table offset
     ASL A : ROL &ad
     ASL A : ROL &ad
-    CLC : ADC #&56 : STA &ac    \ add table base low byte
+    CLC : ADC #LO(dis_opcode_table) : STA &ac
     LDA zp_tmp_hi
-    ADC #&a1
+    ADC #HI(dis_opcode_table)
     STA zp_tmp_hi
     LDY #&03
     LDA (zp_tmp_lo),Y

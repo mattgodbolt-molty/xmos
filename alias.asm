@@ -20,9 +20,9 @@
         JMP alias_syntax_error
 \ Set pointer to start of alias table and begin scanning
 .table_start
-        LDA #&65
+        LDA #LO(alias_clear_flag)
         STA zp_ptr_lo
-        LDA #&b1
+        LDA #HI(alias_clear_flag)
         STA zp_ptr_hi
 .check_end
         LDA (zp_ptr_lo)
@@ -171,9 +171,9 @@
 \ Walks the alias table printing each entry until the &FF sentinel.
 .cmd_aliases
 {
-        LDA #&65
+        LDA #LO(alias_clear_flag)
         STA zp_ptr_lo
-        LDA #&b1
+        LDA #HI(alias_clear_flag)
         STA zp_ptr_hi
 .check
         LDA (zp_ptr_lo)
@@ -229,9 +229,9 @@
 \ If no match, returns to let normal command processing continue.
 .check_alias
 {
-        LDA #&65
+        LDA #LO(alias_clear_flag)
         STA zp_ptr_lo
-        LDA #&b1
+        LDA #HI(alias_clear_flag)
         STA zp_ptr_hi
 .walk_check
         LDA (zp_ptr_lo)
@@ -297,7 +297,7 @@
         CMP #'%'
         BEQ exec_expand
         DEX
-        CMP #&55
+        CMP #'U'
         BNE get_param_num
         JMP write_header
 \ %0-%9: Find the Nth space-delimited parameter from the original command line
@@ -341,8 +341,8 @@
 \ Expansion complete — execute the expanded alias command via OSCLI,
 \ then use OSBYTE &8A to restore the language ROM paging
 .open
-        LDX #&56
-        LDY #&a5
+        LDX #LO(alias_oscli_buf)
+        LDY #HI(alias_oscli_buf)
         JSR oscli
         LDA #&8a
         LDX #&00
@@ -377,9 +377,9 @@
         CMP #&00
         BEQ not_found
         STA alias_file_handle
-        LDA #&65
+        LDA #LO(alias_clear_flag)
         STA zp_ptr_lo
-        LDA #&b1
+        LDA #HI(alias_clear_flag)
         STA zp_ptr_hi
 .read_loop
         LDY alias_file_handle
@@ -420,9 +420,9 @@
         CMP #&00
         BEQ cant_open
         STA alias_file_handle
-        LDA #&65
+        LDA #LO(alias_clear_flag)
         STA zp_ptr_lo
-        LDA #&b1
+        LDA #HI(alias_clear_flag)
         STA zp_ptr_hi
 .check_end
         LDY alias_file_handle

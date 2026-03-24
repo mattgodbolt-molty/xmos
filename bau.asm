@@ -80,12 +80,12 @@
         BNE check_quote
         JMP next_line
 .check_quote
-        CMP #&22                \ opening quote — skip string contents
+        CMP #'"'                \ opening quote — skip string contents
         BNE skip_token
 .skip_string
         INY
         LDA (zp_ptr_lo),Y
-        CMP #&22                \ closing quote
+        CMP #'"'                \ closing quote
         BEQ skip_token
         CMP #&0d
         BNE skip_string
@@ -243,12 +243,12 @@
         BNE check_quote
         JMP lvar_display_value
 .check_quote
-        CMP #&22
+        CMP #'"'
         BNE space_scan_loop
 .skip_string
         INY
         LDA (zp_ptr_lo),Y
-        CMP #&22
+        CMP #'"'
         BEQ space_scan_loop
         CMP #&0d
         BNE skip_string
