@@ -13,10 +13,8 @@
         EQUS &5C, "BAU must be called from BASIC", 0
 .splitting
         STROUT msg_now_splitting
-        LDA &18
-        STA zp_ptr_hi
-        LDA #&00
-        STA zp_ptr_lo
+        LDA basic_page_hi : STA zp_ptr_hi
+        LDA #&00 : STA zp_ptr_lo
 .line_loop
         JSR print_backspace
 .check_line
@@ -27,8 +25,7 @@
         JMP start_space
 .get_length
         LDY #&04
-        LDA (zp_ptr_lo),Y
-        STA os_rs423_buf
+        LDA (zp_ptr_lo),Y : STA os_rs423_buf
         DEY
         CMP #'.'                \ "." — assembler directive, skip entire line
         BNE skip_token
@@ -96,8 +93,7 @@
 .check_end
         CPY #&04                \ nothing to split if colon is first char
         BEQ skip_token
-        LDA #&0d
-        STA (zp_ptr_lo),Y       \ terminate current line at split point
+        LDA #&0d : STA (zp_ptr_lo),Y  \ terminate current line at split point
         TYA
         PHA
         SEC
@@ -106,52 +102,31 @@
         EOR #&ff
         CLC
         ADC #&04
-        STA &ae                 \ new line length for the split-off portion
+        STA zp_src_lo           \ new line length for the split-off portion
         PLA
         STA (zp_ptr_lo),Y
         CLC
-        ADC zp_ptr_lo
-        STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        ADC zp_ptr_lo : STA zp_ptr_lo
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
 \ Shift the program body upward by 3 bytes (room for new line header).
 \ Copies from TOP downward to avoid overwriting data.
-        LDA &00
-        CLC
-        ADC #&02
-        STA zp_tmp_lo
-        LDA &01
-        ADC #&00
-        STA zp_tmp_hi
+        LDA basic_lomem_lo : CLC : ADC #&02 : STA zp_tmp_lo
+        LDA basic_lomem_hi : ADC #&00 : STA zp_tmp_hi
         SEC
-        LDA &00
-        SBC #&01
-        STA zp_work_lo
-        LDA &01
-        SBC #&00
-        STA zp_work_hi
+        LDA basic_lomem_lo : SBC #&01 : STA zp_work_lo
+        LDA basic_lomem_hi : SBC #&00 : STA zp_work_hi
 .copy_byte
-        LDA (zp_work_lo)
-        STA (zp_tmp_lo)
+        LDA (zp_work_lo) : STA (zp_tmp_lo)
         SEC
-        LDA zp_tmp_lo
-        SBC #&01
-        STA zp_tmp_lo
-        LDA zp_tmp_hi
-        SBC #&00
-        STA zp_tmp_hi
+        LDA zp_tmp_lo : SBC #&01 : STA zp_tmp_lo
+        LDA zp_tmp_hi : SBC #&00 : STA zp_tmp_hi
         SEC
-        LDA zp_work_lo
-        SBC #&01
-        STA zp_work_lo
-        LDA zp_work_hi
-        SBC #&00
-        STA zp_work_hi
-        CMP &a9
+        LDA zp_work_lo : SBC #&01 : STA zp_work_lo
+        LDA zp_work_hi : SBC #&00 : STA zp_work_hi
+        CMP zp_ptr_hi
         BNE copy_byte
         LDA zp_work_lo
-        CMP &a8
+        CMP zp_ptr_lo
         BNE copy_byte
 \ Write the new line header: line number 0, then stored length
         LDA #&00
@@ -159,27 +134,20 @@
         STA (zp_ptr_lo),Y       \ line number hi = 0
         INY
         STA (zp_ptr_lo),Y       \ line number lo = 0
-        LDA &ae
+        LDA zp_src_lo
         INY
         STA (zp_ptr_lo),Y       \ line length
         CLC
-        LDA &00
-        ADC #&03
-        STA &00                 \ adjust TOP pointer
-        LDA &01
-        ADC #&00
-        STA &01
+        LDA basic_lomem_lo : ADC #&03 : STA basic_lomem_lo
+        LDA basic_lomem_hi : ADC #&00 : STA basic_lomem_hi
         JMP check_line          \ re-scan from this new line
 \ Advance pointer to next BASIC line (add line length to pointer)
 .next_line
         LDY #&03
         LDA (zp_ptr_lo),Y
         CLC
-        ADC zp_ptr_lo
-        STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        ADC zp_ptr_lo : STA zp_ptr_lo
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP line_loop
 
 \ After BAU finishes, reset BASIC state: issue RENUMBER via *KEY9
@@ -214,9 +182,8 @@
         JSR copy_inline_to_stack  \ BRK error: "Must be called from BASIC!"
         EQUS &5C, "Must be called from BASIC!", 0
 .setup
-        LDA &18
-        STA zp_ptr_hi
-        STZ &a8
+        LDA basic_page_hi : STA zp_ptr_hi
+        STZ zp_ptr_lo
         STROUT msg_now_spacing
 }
 .space_line_loop
@@ -277,7 +244,7 @@
         BEQ space_scan_loop
         CMP #&8a                \ LINE — skip
         BEQ space_scan_loop
-        CMP #&f2                \ PROC — skip
+        CMP #cmd_line_lo        \ PROC — skip
         BEQ space_scan_loop
         CMP #&a4                \ FN — skip
         BEQ space_scan_loop
@@ -343,12 +310,8 @@
         STA (zp_ptr_lo),Y
         PLY
         CLC
-        LDA &00
-        ADC #&01
-        STA &00
-        LDA &01
-        ADC #&00
-        STA &01
+        LDA basic_lomem_lo : ADC #&01 : STA basic_lomem_lo
+        LDA basic_lomem_hi : ADC #&00 : STA basic_lomem_hi
         LDA #' '
         INY
         STA (zp_ptr_lo),Y       \ write space byte
@@ -380,19 +343,14 @@
         LDY #&03
         LDA (zp_ptr_lo),Y
         CLC
-        ADC zp_ptr_lo
-        STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        ADC zp_ptr_lo : STA zp_ptr_lo
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP space_line_loop
 }
 \ Save the new TOP pointer (program may have grown) and finish
 .space_save_top
-    LDA &00
-    STA &12
-    LDA &01
-    STA &13
+    LDA basic_lomem_lo : STA basic_top_lo
+    LDA basic_lomem_hi : STA basic_top_hi
     JSR osnewl
     RTS
 
@@ -408,12 +366,8 @@
         STA (zp_ptr_lo),Y
         PLY
         CLC
-        LDA &00
-        ADC #&01
-        STA &00
-        LDA &01
-        ADC #&00
-        STA &01
+        LDA basic_lomem_lo : ADC #&01 : STA basic_lomem_lo
+        LDA basic_lomem_hi : ADC #&00 : STA basic_lomem_hi
         LDA #' '
         INY
         STA (zp_ptr_lo),Y
@@ -431,25 +385,19 @@
         PHA
         TYA
         CLC
-        ADC zp_ptr_lo
-        STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
-        LDA &00
-        STA zp_tmp_lo
-        LDA &01
-        STA zp_tmp_hi
+        ADC zp_ptr_lo : STA zp_ptr_lo
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
+        LDA basic_lomem_lo : STA zp_tmp_lo
+        LDA basic_lomem_hi : STA zp_tmp_hi
         SEC
-        LDA &00
+        LDA basic_lomem_lo
         SBC #&01
         STA zp_work_lo
-        LDA &01
+        LDA basic_lomem_hi
         SBC #&00
         STA zp_work_hi
 .copy_loop
-        LDA (zp_work_lo)
-        STA (zp_tmp_lo)
+        LDA (zp_work_lo) : STA (zp_tmp_lo)
         SEC
         LDA zp_tmp_lo
         SBC #&01
@@ -464,10 +412,10 @@
         LDA zp_work_hi
         SBC #&00
         STA zp_work_hi
-        CMP &a9
+        CMP zp_ptr_hi
         BNE copy_loop
         LDA zp_work_lo
-        CMP &a8
+        CMP zp_ptr_lo
         BNE copy_loop
         PLA
         STA zp_ptr_hi

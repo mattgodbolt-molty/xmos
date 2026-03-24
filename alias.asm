@@ -12,18 +12,15 @@
 \ if found, removes it by compacting the table, then appends the new entry.
 .cmd_alias
 {
-        LDA #&00
-        STA alias_semicolon_flag
+        LDA #&00 : STA alias_semicolon_flag
         JSR parse_cmdline
         CMP #&0d
         BNE table_start
         JMP alias_syntax_error
 \ Set pointer to start of alias table and begin scanning
 .table_start
-        LDA #LO(alias_clear_flag)
-        STA zp_ptr_lo
-        LDA #HI(alias_clear_flag)
-        STA zp_ptr_hi
+        LDA #LO(alias_clear_flag) : STA zp_ptr_lo
+        LDA #HI(alias_clear_flag) : STA zp_ptr_hi
 .check_end
         LDA (zp_ptr_lo)
         CMP #&ff
@@ -35,8 +32,7 @@
         STY compare_string_y
         BCC find_end
 \ Match found — delete existing entry by compacting the table over it
-        LDA #&ff
-        STA alias_semicolon_flag
+        LDA #&ff : STA alias_semicolon_flag
         LDY #&ff
 .skip_name
         INY
@@ -46,14 +42,13 @@
         LDA (zp_ptr_lo),Y
         CLC
         ADC zp_ptr_lo
-        STA &aa
+        STA zp_work_lo
         LDA zp_ptr_hi
         ADC #&00
-        STA &ab
+        STA zp_work_hi
         LDY #&00
 .copy_loop
-        LDA (&aa),Y
-        STA (zp_ptr_lo),Y
+        LDA (zp_work_lo),Y : STA (zp_ptr_lo),Y
         CMP #&ff
         BNE copy_next
         STA (zp_ptr_lo),Y
@@ -64,9 +59,9 @@
 .copy_next
         INY
         BNE copy_loop
-        INC &ac
-        INC &aa
-        LDA &aa
+        INC zp_tmp_lo
+        INC zp_work_lo
+        LDA zp_work_lo
         CMP #&bf
         BCC copy_loop
 \ No match — skip past this entry's name and length to the next entry
@@ -81,15 +76,12 @@
         CLC
         ADC zp_ptr_lo
         STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP check_end
 \ Reached end of table (or deleted entry) — now append the new alias.
 \ First check there's enough room in the table for the new entry.
 .exec_setup
-        LDA compare_string_y
-        STA &70
+        LDA compare_string_y : STA zp_scratch
         LDY compare_string_y
         DEY
 .exec_copy
@@ -111,12 +103,12 @@
 \ Write the new alias entry: uppercase name, null separator, expansion, CR, &FF sentinel
 .exec_run
         CLC
-        LDA &f2
+        LDA cmd_line_lo
         ADC compare_string_y
-        STA &f2
-        LDA &f3
+        STA cmd_line_lo
+        LDA cmd_line_hi
         ADC #&00
-        STA &f3
+        STA cmd_line_hi
         LDY #&00
 .skip_ws
         LDA (cmd_line_lo),Y
@@ -138,16 +130,15 @@
         BNE skip_ws
 \ Null-terminate the alias name, then store the expansion text and length
 .terminate
-        LDA #&00
-        STA (zp_ptr_lo),Y
+        LDA #&00 : STA (zp_ptr_lo),Y
         INY
         SEC
-        LDA &f2
+        LDA cmd_line_lo
         SBC #&01
-        STA &f2
-        LDA &f3
+        STA cmd_line_lo
+        LDA cmd_line_hi
         SBC #&00
-        STA &f3
+        STA cmd_line_hi
         STY compare_string_y
         INY
 .parse_arg
@@ -160,8 +151,7 @@
 .store_arg
         STA (zp_ptr_lo),Y
         INY
-        LDA #&ff
-        STA (zp_ptr_lo),Y
+        LDA #&ff : STA (zp_ptr_lo),Y
         TYA
         LDY compare_string_y
         STA (zp_ptr_lo),Y
@@ -171,10 +161,8 @@
 \ Walks the alias table printing each entry until the &FF sentinel.
 .cmd_aliases
 {
-        LDA #LO(alias_clear_flag)
-        STA zp_ptr_lo
-        LDA #HI(alias_clear_flag)
-        STA zp_ptr_hi
+        LDA #LO(alias_clear_flag) : STA zp_ptr_lo
+        LDA #HI(alias_clear_flag) : STA zp_ptr_hi
 .check
         LDA (zp_ptr_lo)
         CMP #&ff
@@ -204,9 +192,7 @@
         CLC
         ADC zp_ptr_lo
         STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP check
 .done
         RTS
@@ -214,8 +200,7 @@
 \ Delete alias — write &FF sentinel at current position to remove the entry.
 \ Only valid if an existing alias was found (alias_semicolon_flag set).
 .alias_clear_entry
-    LDA #&ff
-    STA (zp_ptr_lo)
+    LDA #&ff : STA (zp_ptr_lo)
     LDA alias_semicolon_flag
     BEQ alias_syntax_error
     RTS
@@ -229,10 +214,8 @@
 \ If no match, returns to let normal command processing continue.
 .check_alias
 {
-        LDA #LO(alias_clear_flag)
-        STA zp_ptr_lo
-        LDA #HI(alias_clear_flag)
-        STA zp_ptr_hi
+        LDA #LO(alias_clear_flag) : STA zp_ptr_lo
+        LDA #HI(alias_clear_flag) : STA zp_ptr_hi
 .walk_check
         LDA (zp_ptr_lo)
         CMP #&ff
@@ -251,9 +234,7 @@
         TYA
         ADC zp_ptr_lo
         STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         PLY
         JMP walk_check
 \ No alias matched — clean up stack and return to normal command dispatch
@@ -367,9 +348,9 @@
         JSR parse_cmdline
         CLC
         TYA
-        ADC &f2
+        ADC cmd_line_lo
         TAX
-        LDA &f3
+        LDA cmd_line_hi
         ADC #&00
         TAY
         LDA #'@'
@@ -377,10 +358,8 @@
         CMP #&00
         BEQ not_found
         STA alias_file_handle
-        LDA #LO(alias_clear_flag)
-        STA zp_ptr_lo
-        LDA #HI(alias_clear_flag)
-        STA zp_ptr_hi
+        LDA #LO(alias_clear_flag) : STA zp_ptr_lo
+        LDA #HI(alias_clear_flag) : STA zp_ptr_hi
 .read_loop
         LDY alias_file_handle
         JSR osbget
@@ -390,9 +369,7 @@
         LDA zp_ptr_lo
         ADC #&01
         STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP read_loop
 .close
         LDA #&00
@@ -410,9 +387,9 @@
         JSR parse_cmdline
         CLC
         TYA
-        ADC &f2
+        ADC cmd_line_lo
         TAX
-        LDA &f3
+        LDA cmd_line_hi
         ADC #&00
         TAY
         LDA #&80
@@ -420,10 +397,8 @@
         CMP #&00
         BEQ cant_open
         STA alias_file_handle
-        LDA #LO(alias_clear_flag)
-        STA zp_ptr_lo
-        LDA #HI(alias_clear_flag)
-        STA zp_ptr_hi
+        LDA #LO(alias_clear_flag) : STA zp_ptr_lo
+        LDA #HI(alias_clear_flag) : STA zp_ptr_hi
 .check_end
         LDY alias_file_handle
         LDA (zp_ptr_lo)
@@ -434,9 +409,7 @@
         LDA zp_ptr_lo
         ADC #&01
         STA zp_ptr_lo
-        LDA zp_ptr_hi
-        ADC #&00
-        STA zp_ptr_hi
+        LDA zp_ptr_hi : ADC #&00 : STA zp_ptr_hi
         JMP check_end
 .close
         LDA #&00
@@ -449,8 +422,7 @@
 \ *ALICLR — Clear all aliases by writing &FF sentinel at the start of the table.
 .cmd_aliclr
 {
-        LDA #&ff
-        STA alias_clear_flag
+        LDA #&ff : STA alias_clear_flag
         RTS
 }
 \ *STORE — Save the first 1K of the current sideways ROM slot to a buffer.
@@ -464,21 +436,14 @@
         STA sheila_romsel
         LDX #&00
 .copy_loop
-        LDA &8000,X
-        STA store_buf_0,X
-        LDA &8100,X
-        STA store_buf_1,X
-        LDA &8200,X
-        STA store_buf_2,X
-        LDA &8300,X
-        STA alias_exec_buf,X
+        LDA &8000,X : STA store_buf_0,X
+        LDA &8100,X : STA store_buf_1,X
+        LDA &8200,X : STA store_buf_2,X
+        LDA &8300,X : STA alias_exec_buf,X
         INX
         BNE copy_loop
-        LDA sheila_romsel
-        AND #&7f
-        STA sheila_romsel
-        LDA #&ff
-        STA store_flag
+        LDA sheila_romsel : AND #&7f : STA sheila_romsel
+        LDA #&ff : STA store_flag
         RTS
 }
 \ alias_init — Called on ROM service reset. If a ROM was previously saved
@@ -494,17 +459,12 @@
         STA sheila_romsel
         LDX #&00
 .restore_loop
-        LDA store_buf_0,X
-        STA &8000,X
-        LDA store_buf_1,X
-        STA &8100,X
-        LDA store_buf_2,X
-        STA &8200,X
+        LDA store_buf_0,X : STA &8000,X
+        LDA store_buf_1,X : STA &8100,X
+        LDA store_buf_2,X : STA &8200,X
         INX
         BNE restore_loop
-        LDA sheila_romsel
-        AND #&7f
-        STA sheila_romsel
+        LDA sheila_romsel : AND #&7f : STA sheila_romsel
 .done
         RTS
 }
@@ -539,9 +499,7 @@
 \ into a 16-bit value stored at &AE/&AF. Stops at CR or space.
 .parse_hex_word
 {
-        LDA #&00
-        STA &ae
-        STA &af
+        LDA #&00 : STA zp_src_lo : STA zp_src_hi
 .loop
         LDA (cmd_line_lo),Y
         CMP #&0d
@@ -554,20 +512,20 @@
         EQUS &EB, "Invalid hex digit", 0
 \ Shift existing value left by 4 bits and OR in the new digit
 .shift
-        ASL &ae
-        ROL &af
-        ASL &ae
-        ROL &af
-        ASL &ae
-        ROL &af
-        ASL &ae
-        ROL &af
+        ASL zp_src_lo
+        ROL zp_src_hi
+        ASL zp_src_lo
+        ROL zp_src_hi
+        ASL zp_src_lo
+        ROL zp_src_hi
+        ASL zp_src_lo
+        ROL zp_src_hi
         CLC
-        ADC &ae
-        STA &ae
-        LDA &af
+        ADC zp_src_lo
+        STA zp_src_lo
+        LDA zp_src_hi
         ADC #&00
-        STA &af
+        STA zp_src_hi
         INY
         BNE loop
 .done

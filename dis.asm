@@ -61,10 +61,8 @@
 }
 .dis_display_line
 {
-        LDA mem_vdu_1
-        STA zp_src_lo
-        LDA mem_vdu_2
-        STA zp_src_hi
+        LDA mem_vdu_1 : STA zp_src_lo
+        LDA mem_vdu_2 : STA zp_src_hi
 }
 \ Print one disassembled line: address, mnemonic, operand, raw bytes, ASCII.
 \ The opcode is multiplied by 4 to index into a 1024-byte lookup table that
@@ -79,12 +77,11 @@
     JSR dis_print_hex_word
     LDA #' '
     JSR oswrch
-    LDY #&00
-    STY &ad
+    LDY #&00 : STY zp_tmp_hi
     LDA (zp_src_lo),Y           \ opcode × 4 to get table offset
-    ASL A : ROL &ad
-    ASL A : ROL &ad
-    CLC : ADC #LO(dis_opcode_table) : STA &ac
+    ASL A : ROL zp_tmp_hi
+    ASL A : ROL zp_tmp_hi
+    CLC : ADC #LO(dis_opcode_table) : STA zp_tmp_lo
     LDA zp_tmp_hi
     ADC #HI(dis_opcode_table)
     STA zp_tmp_hi
@@ -110,10 +107,8 @@
     PHA
     ASL A
     TAX
-    LDA dis_addr_mode_ptrs,X
-    STA zp_tmp_lo
-    LDA dis_addr_mode_ptrs + 1,X
-    STA zp_tmp_hi
+    LDA dis_addr_mode_ptrs,X : STA zp_tmp_lo
+    LDA dis_addr_mode_ptrs + 1,X : STA zp_tmp_hi
     LDY #&ff
 \ Walk the format string character by character. Literal chars are printed
 \ directly; 'h' (high byte), 'l' (low byte), and 'b' (branch target)
@@ -200,12 +195,9 @@
         JMP dis_print_header
 \ Save current address so *DIS with no argument can resume here.
 .save_state
-        LDA zp_src_lo
-        STA mem_vdu_1
-        LDA zp_src_hi
-        STA mem_vdu_2
-        LDA #&00
-        STA &ff
+        LDA zp_src_lo : STA mem_vdu_1
+        LDA zp_src_hi : STA mem_vdu_2
+        LDA #&00 : STA os_escape_effect
         RTS
 }
 \ Print the high byte of a two-byte operand (byte at PC+2).
@@ -233,20 +225,20 @@
     CLC
     LDA zp_src_lo
     ADC #&02
-    STA &a8
+    STA zp_ptr_lo
     LDA zp_src_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     LDA (zp_src_lo),Y
     BMI dis_advance
     CLC
     ADC &a8
-    STA &a8
-    LDA &a9
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&00
-    STA &a9
+    STA zp_ptr_hi
     JSR dis_print_hex_word
-    LDA &a8
+    LDA zp_ptr_lo
     JSR dis_print_hex_word
     PLY
     JMP dis_format_loop
@@ -255,12 +247,12 @@
 .dis_advance
     CLC
     ADC &a8
-    STA &a8
-    LDA &a9
+    STA zp_ptr_lo
+    LDA zp_ptr_hi
     ADC #&ff
-    STA &a9
+    STA zp_ptr_hi
     JSR dis_print_hex_word
-    LDA &a8
+    LDA zp_ptr_lo
     JSR dis_print_hex_word
     PLY
     JMP dis_format_loop
@@ -275,8 +267,7 @@
         BMI rts
         STA dec_value_hi
         LDY #&02
-        LDA (&a8),Y
-        STA dec_value_lo
+        LDA (&a8),Y : STA dec_value_lo
         PHX
         PHY
         JSR print_decimal
