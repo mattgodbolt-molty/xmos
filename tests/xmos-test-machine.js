@@ -18,6 +18,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const jsbeebBase = path.join(__dirname, "..", "node_modules", "jsbeeb");
 setNodeBasePath(jsbeebBase);
 
+const romData = new Uint8Array(fs.readFileSync(path.join(__dirname, "..", "original.rom")));
 const ssdData = fs.readFileSync(path.join(__dirname, "..", "original.ssd"));
 
 /**
@@ -28,17 +29,15 @@ export async function bootWithXmos() {
     const machine = new TestMachine("Master");
     await machine.initialise();
 
-    machine.loadDiscData(ssdData);
-    await machine.runUntilInput();
-    await machine.type("*SRLOAD XMOS 8000 7Q");
-    await machine.runUntilInput();
+    // Load ROM directly into sideways RAM slot 7
+    machine.loadSidewaysRam(7, romData);
 
-    // Hard reset (CTRL+BREAK) so the MOS re-scans ROM slots
-    // and recognises the newly loaded SWRAM contents.
-    // The hard reset calls fdc.powerOnReset() which clears the disc,
-    // so we re-load it afterwards for commands that need disc access.
+    // Hard reset so the MOS re-scans ROM slots and recognises XMOS.
     machine.reset(true);
     await machine.runUntilInput();
+
+    // Re-load disc (hard reset clears the FDC) for commands that
+    // need disc access (e.g. *CAT, *S, *ALISV/*ALILD).
     machine.loadDiscData(ssdData);
 
     return machine;
@@ -98,19 +97,29 @@ export function readMode7ScreenRich(machine) {
  * Safe to call multiple times on the same machine — each hook is
  * independent and stateless (no VDU state machine to get confused).
  */
-export function captureOutput(machine) {
+export function captureOutput(machine, { raw = false } = {}) {
     let chars = [];
     machine.processor.debugInstruction.add((addr) => {
         const wrchv = machine.readword(0x20e);
         if (addr === wrchv) {
             const ch = machine.processor.a;
-            if (ch >= 0x20 && ch < 0x7f) {
+            if (raw) {
+                chars.push(ch);
+            } else if (ch >= 0x20 && ch < 0x7f) {
                 chars.push(ch);
             }
         }
         return false;
     });
-    return () => chars.map((c) => String.fromCharCode(c)).join("");
+    return () =>
+        chars
+            .map((c) => {
+                if (c === 10) return "\n";
+                if (c === 13) return "";
+                if (c >= 0x20 && c < 0x7f) return String.fromCharCode(c);
+                return "";
+            })
+            .join("");
 }
 
 /**
@@ -121,18 +130,16 @@ export function captureOutput(machine) {
  * SHIFT is held during the output phase so the MOS doesn't pause with
  * "Shift for more" when output fills the screen.
  */
-export async function runCommand(machine, command, cycles = 8_000_000) {
-    const getOutput = captureOutput(machine);
+export async function runCommand(machine, command, { cycles = 8_000_000, raw = false } = {}) {
+    const getOutput = captureOutput(machine, { raw });
     await machine.type(command);
-    // Hold SHIFT so paged output scrolls without pausing
     machine.keyDown(16);
     await machine.runFor(cycles);
     machine.keyUp(16);
-    const raw = getOutput();
-    // Strip the typed echo from the start of the output
-    const echoEnd = raw.indexOf(command);
+    const output = getOutput();
+    const echoEnd = output.indexOf(command);
     if (echoEnd >= 0) {
-        return raw.slice(echoEnd + command.length);
+        return output.slice(echoEnd + command.length);
     }
-    return raw;
+    return output;
 }

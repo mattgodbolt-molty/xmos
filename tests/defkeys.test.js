@@ -44,3 +44,24 @@ describe("*DEFKEYS — interactive key definition", () => {
         expect(output).toContain("Redefined keys on, and are:");
     });
 });
+
+describe("*L — editing environment setup", () => {
+    it("should restore program with OLD and switch to MODE 128", async () => {
+        const machine = await bootWithXmos();
+
+        // Enter a program, then soft reset (clears BASIC but
+        // program data remains in memory for OLD to recover)
+        await runCommand(machine, '10PRINT"HELLO"');
+        machine.reset(false);
+        await machine.runUntilInput();
+
+        // *L runs: LISTO 1, OLD, MODE 128, colour swap
+        await machine.type("*L");
+        await machine.runFor(60_000_000);
+
+        const output = await runCommand(machine, "LIST");
+        // OLD restored the program, LISTO 1 added space after line number
+        expect(output).toBe('   10 PRINT"HELLO">');
+    });
+});
+
