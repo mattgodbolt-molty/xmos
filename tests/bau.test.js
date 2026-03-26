@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { bootWithXmos, runCommand } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand } from "./xmos-test-machine.js";
 
 describe("*BAU — break apart utility", () => {
     it("should split multi-statement lines", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, '10 PRINT "A":PRINT "B":PRINT "C"');
 
         await runCommand(machine, "*BAU");
@@ -16,7 +16,7 @@ describe("*BAU — break apart utility", () => {
     });
 
     it("should not split colons inside strings", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, '10 PRINT "A:B":PRINT "C"');
 
         await runCommand(machine, "*BAU");
@@ -28,7 +28,7 @@ describe("*BAU — break apart utility", () => {
     });
 
     it("should leave single-statement lines unchanged", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, '10 PRINT "HELLO"');
 
         await runCommand(machine, "*BAU");
@@ -38,7 +38,7 @@ describe("*BAU — break apart utility", () => {
     });
 
     it("should not split after REM", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "10 REM this:has:colons");
 
         await runCommand(machine, "*BAU");
@@ -51,7 +51,7 @@ describe("*BAU — break apart utility", () => {
 
 describe("*SPACE — insert keyword spaces", () => {
     it("should insert spaces around keywords", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "10 FORX=1TO10:PRINTX:NEXT");
 
         await runCommand(machine, "*SPACE");
@@ -65,7 +65,7 @@ describe("*SPACE — insert keyword spaces", () => {
     });
 
     it("should not modify an empty program", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         // No program loaded
         await runCommand(machine, "*SPACE");
         const output = await runCommand(machine, "LIST");

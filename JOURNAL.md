@@ -526,5 +526,8 @@ before copying expansion). Format is: name + null + gap + expansion
 - [x] keyDown()/keyUp() convenience methods
 - [x] loadSidewaysRam(slot, data)
 - [x] loadDiscData(data), reset(hard)
-- [ ] snapshotState/restoreState including SWRAM (for faster tests)
-- [ ] Reusable capture API (single resettable hook)
+- [x] snapshotState/restoreState including SWRAM (jsbeeb PR #606)
+- [x] Reusable capture API: startCapture/drainText (jsbeeb PR #606)
+- [x] Migrated xmos-test-machine.js to use built-in capture API — replaced
+  custom WRCHV hook with startCapture()/drainText(). All 80 tests pass,
+  suite runs in ~25s (down from 84s at the start of the session).

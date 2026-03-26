@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootWithXmos, runCommand, readMode7Screen } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand, readMode7Screen } from "./xmos-test-machine.js";
 
 const CAPS_LOCK = 20;
 
@@ -15,7 +15,7 @@ async function pressKey(machine, keyCode, cycles = 200000) {
 
 describe("*DEFKEYS — interactive key definition", () => {
     it("should show the key redefiner screen", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*DEFKEYS");
         await machine.runFor(4_000_000);
 
@@ -25,7 +25,7 @@ describe("*DEFKEYS — interactive key definition", () => {
     });
 
     it("should accept 5 keypresses and activate KEYON", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*DEFKEYS");
         await machine.runFor(4_000_000);
 
@@ -47,7 +47,7 @@ describe("*DEFKEYS — interactive key definition", () => {
 
 describe("*L — editing environment setup", () => {
     it("should restore program with OLD and switch to MODE 128", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
 
         // Enter a program, then soft reset (clears BASIC but
         // program data remains in memory for OLD to recover)

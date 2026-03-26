@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { bootWithXmos, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, captureOutput } from "./xmos-test-machine.js";
 
 describe("*DIS", () => {
     it("should disassemble the ROM service entry point", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
 
         await machine.type("*DIS 802B");
@@ -17,7 +17,7 @@ describe("*DIS", () => {
     });
 
     it("should show JMP at &8003 (service entry jump)", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
 
         await machine.type("*DIS 8003");
@@ -30,7 +30,7 @@ describe("*DIS", () => {
     });
 
     it("should show multiple lines when space is held", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
 
         await machine.type("*DIS 802B");
@@ -46,7 +46,7 @@ describe("*DIS", () => {
     });
 
     it("should disassemble zero page as BRK instructions", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
 
         // Zero page will contain whatever values are there, but &00 = BRK
@@ -58,7 +58,7 @@ describe("*DIS", () => {
     });
 
     it("should disassemble MOS code at high addresses", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
 
         // &FFE3 is OSASCI — CMP #&0D (check for carriage return)

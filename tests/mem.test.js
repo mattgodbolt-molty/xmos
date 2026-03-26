@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { bootWithXmos, readMode7Screen, readMode7ScreenRich, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, readMode7Screen, readMode7ScreenRich, captureOutput } from "./xmos-test-machine.js";
 
 describe("*MEM — memory editor", () => {
     it("should display header with ADDR, HEX CODE, and ASCII labels", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 
@@ -15,7 +15,7 @@ describe("*MEM — memory editor", () => {
     });
 
     it("should colour-code the header in green", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 
@@ -26,7 +26,7 @@ describe("*MEM — memory editor", () => {
     });
 
     it("should show hex data somewhere on screen", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 
@@ -39,7 +39,7 @@ describe("*MEM — memory editor", () => {
     });
 
     it("should return to prompt after ESCAPE", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 
@@ -61,7 +61,7 @@ describe("*MEM — memory editor", () => {
     });
 
     it("cursor keys should navigate the display", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 
@@ -79,7 +79,7 @@ describe("*MEM — memory editor", () => {
     });
 
     it("TAB should toggle between hex and ASCII mode", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await machine.type("*MEM 8000");
         await machine.runFor(8_000_000);
 

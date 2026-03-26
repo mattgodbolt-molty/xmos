@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootWithXmos, runCommand, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand, captureOutput } from "./xmos-test-machine.js";
 
 const CTRL = 17;
 
@@ -50,7 +50,7 @@ describe("*STORE — keep function keys on CTRL+BREAK", () => {
     let machine;
 
     beforeEach(async () => {
-        machine = await bootWithXmos();
+        machine = await restoreOrBoot();
         patchStoreF4Bug(machine);
     });
 

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootWithXmos, runCommand, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand, captureOutput } from "./xmos-test-machine.js";
 
 describe("*XON / *XOFF — extended input", () => {
     let machine;
 
     beforeEach(async () => {
-        machine = await bootWithXmos();
+        machine = await restoreOrBoot();
         await runCommand(machine, '10 PRINT "HELLO"');
         await runCommand(machine, '20 PRINT "WORLD"');
     });
@@ -182,32 +182,32 @@ describe("*XON / *XOFF — extended input", () => {
 
 describe("*KEYON / *KEYOFF / *KSTATUS", () => {
     it("*KEYON should report keys are redefined", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*KEYON");
         expect(output).toBe("Keys now redefined>");
     });
 
     it("*KEYOFF should report keys are off", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*KEYOFF");
         expect(output).toBe("Redefined keys off>");
     });
 
     it("*KSTATUS should report off by default", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*KSTATUS");
         expect(output).toBe("Redefined keys off>");
     });
 
     it("*KEYON twice should warn already executed", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "*KEYON");
         const output = await runCommand(machine, "*KEYON");
         expect(output).toContain("already executed");
     });
 
     it("*KSTATUS after *KEYON then *KEYOFF should report off", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "*KEYON");
         await runCommand(machine, "*KEYOFF");
         const output = await runCommand(machine, "*KSTATUS");
@@ -215,7 +215,7 @@ describe("*KEYON / *KEYOFF / *KSTATUS", () => {
     });
 
     it("*KSTATUS after *KEYON should list key definitions", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "*KEYON");
         const output = await runCommand(machine, "*KSTATUS");
 
