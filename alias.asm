@@ -236,7 +236,9 @@
 .cmd_done
         PLY : PLX : PLA
         RTS
-\ Alias matched — expand it with parameter substitution into the execution buffer
+\ Alias matched — expand it with parameter substitution into store_buf_3.
+\ The expanded text becomes the argument to *KEY 0, which is then triggered
+\ to type it at the prompt (see .open below).
 .exec_entry
         PLY
         JSR parse_cmdline
@@ -313,15 +315,16 @@
 .skip_rest
         PLX
         JMP exec_expand
-\ Expansion complete — execute the expanded alias command via OSCLI,
-\ then use OSBYTE &8A to restore the language ROM paging
+\ Expansion complete — program soft key f0 with the expanded text,
+\ then inject an f0 keypress so the MOS types it at the prompt.
+\ The user sees the expansion and presses ENTER to execute.
 .open
-        LDX #LO(alias_oscli_buf)
+        LDX #LO(alias_oscli_buf)  \ alias_oscli_buf = "KEY0 " + expanded text
         LDY #HI(alias_oscli_buf)
-        JSR oscli
-        LDA #&8a
-        LDX #&00
-        LDY #&89
+        JSR oscli               \ *KEY 0 <expanded text>
+        LDA #&8a                \ OSBYTE &8A: insert into buffer
+        LDX #&00                \ buffer 0 = keyboard
+        LDY #&89                \ &89 = f0 keypress
         JSR osbyte
         PLY : PLX : PLA
         LDA #&00
