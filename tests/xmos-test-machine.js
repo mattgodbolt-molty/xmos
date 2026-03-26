@@ -29,16 +29,13 @@ export async function bootWithXmos() {
     const machine = new TestMachine("Master");
     await machine.initialise();
 
-    // Load ROM directly into sideways RAM slot 7
     machine.loadSidewaysRam(7, romData);
-
-    // Hard reset so the MOS re-scans ROM slots and recognises XMOS.
     machine.reset(true);
     await machine.runUntilInput();
-
-    // Re-load disc (hard reset clears the FDC) for commands that
-    // need disc access (e.g. *CAT, *S, *ALISV/*ALILD).
     machine.loadDiscData(ssdData);
+
+    // Install the capture hook once — use drainText() to read output
+    machine.startCapture();
 
     return machine;
 }
@@ -68,7 +65,6 @@ export function readMode7ScreenRich(machine) {
         let fg = "white";
         const cols = [];
         for (let col = 0; col < 40; col++) {
-            // Mode 7 ignores bit 7 — strip it for control code detection
             const raw = machine.readbyte(0x7c00 + row * 40 + col);
             const byte = raw & 0x7f;
             if (byte >= 0x01 && byte <= 0x07) {
@@ -89,54 +85,28 @@ export function readMode7ScreenRich(machine) {
 }
 
 /**
- * Install a text capture hook that intercepts characters at WRCHV.
- * Re-reads WRCHV on every instruction so it stays correct even if
- * the vector changes. Collects only printable ASCII (0x20-0x7E).
- * Returns a function that returns the captured text so far.
- *
- * Safe to call multiple times on the same machine — each hook is
- * independent and stateless (no VDU state machine to get confused).
+ * Capture output using the TestMachine's built-in capture API.
+ * Returns a function that, when called, returns all text captured
+ * since this captureOutput call was made.
  */
 export function captureOutput(machine, { raw = false } = {}) {
-    let chars = [];
-    machine.processor.debugInstruction.add((addr) => {
-        const wrchv = machine.readword(0x20e);
-        if (addr === wrchv) {
-            const ch = machine.processor.a;
-            if (raw) {
-                chars.push(ch);
-            } else if (ch >= 0x20 && ch < 0x7f) {
-                chars.push(ch);
-            }
-        }
-        return false;
-    });
-    return () =>
-        chars
-            .map((c) => {
-                if (c === 10) return "\n";
-                if (c === 13) return "";
-                if (c >= 0x20 && c < 0x7f) return String.fromCharCode(c);
-                return "";
-            })
-            .join("");
+    // Drain any accumulated text from before this call
+    machine.drainText();
+    return () => machine.drainText({ raw });
 }
 
 /**
- * Type a command, run until output settles, and return the response text.
- * The capture hook is installed before type() because type() runs the CPU
- * and the MOS may start producing output during keystroke processing.
- *
- * SHIFT is held during the output phase so the MOS doesn't pause with
- * "Shift for more" when output fills the screen.
+ * Type a command, run until the prompt returns, and return the
+ * response text. SHIFT is held during execution to prevent
+ * "Shift for more" paging pauses.
  */
 export async function runCommand(machine, command, { raw = false } = {}) {
-    const getOutput = captureOutput(machine, { raw });
+    machine.drainText(); // clear any prior output
     await machine.type(command);
     machine.keyDown(16);
     await machine.runUntilInput();
     machine.keyUp(16);
-    const output = getOutput();
+    const output = machine.drainText({ raw });
     const echoEnd = output.indexOf(command);
     if (echoEnd >= 0) {
         return output.slice(echoEnd + command.length);
