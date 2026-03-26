@@ -40,6 +40,26 @@ export async function bootWithXmos() {
     return machine;
 }
 
+let _cachedSnapshot = null;
+let _cachedMachine = null;
+
+/**
+ * Boot once and cache a snapshot. Subsequent calls restore from the
+ * snapshot instead of re-booting — much faster for per-test setup.
+ * Returns the same TestMachine instance each time (state is reset).
+ */
+export async function restoreOrBoot() {
+    if (_cachedSnapshot) {
+        _cachedMachine.restore(_cachedSnapshot);
+        _cachedMachine.drainText();
+        return _cachedMachine;
+    }
+    const machine = await bootWithXmos();
+    _cachedSnapshot = machine.snapshot();
+    _cachedMachine = machine;
+    return machine;
+}
+
 /**
  * Mode 7 teletext colour names (control codes &00-&07 set alpha colour).
  */

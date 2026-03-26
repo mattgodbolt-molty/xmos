@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootWithXmos, runCommand, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand, captureOutput } from "./xmos-test-machine.js";
 
 /**
  * Install a BRK error capture hook. Returns a function that returns
@@ -36,7 +36,7 @@ describe("alias table capacity", () => {
     let machine;
 
     beforeEach(async () => {
-        machine = await bootWithXmos();
+        machine = await restoreOrBoot();
     });
 
     it("should fill the alias table and report overflow", async () => {
@@ -93,7 +93,7 @@ describe("alias expansion buffer", () => {
     let machine;
 
     beforeEach(async () => {
-        machine = await bootWithXmos();
+        machine = await restoreOrBoot();
     });
 
     it("should expand a long alias with parameters", async () => {
@@ -112,7 +112,7 @@ describe("alias expansion buffer", () => {
 
 describe("input line limits", () => {
     it("should handle a long BASIC line", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const longLine = "10 REM " + "A".repeat(200);
         await runCommand(machine, longLine);
         const output = await runCommand(machine, "LIST");
@@ -123,7 +123,7 @@ describe("input line limits", () => {
 
 describe("*LVAR with many variables", () => {
     it("should list many variables of different types", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "AA=1:BB=2:CC=3:DD=4:EE=5");
         await runCommand(machine, 'FF$="hello":GG$="world"');
         await runCommand(machine, "DIM HH(5)");
@@ -138,7 +138,7 @@ describe("*LVAR with many variables", () => {
 
 describe("*DIS across page boundaries", () => {
     it("should disassemble across a page boundary", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const getOutput = captureOutput(machine);
         await machine.type("*DIS 80F0");
         machine.keyDown(32);
@@ -152,7 +152,7 @@ describe("*DIS across page boundaries", () => {
 
 describe("*BAU with many split points", () => {
     it("should split a line with 5 colon-separated statements", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         await runCommand(machine, "10 A=1:B=2:C=3:D=4:E=5");
         await runCommand(machine, "*BAU");
         const output = await runCommand(machine, "LIST");

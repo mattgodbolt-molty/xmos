@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { bootWithXmos, runCommand, captureOutput } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand, captureOutput } from "./xmos-test-machine.js";
 
 const CAPS_LOCK = 20;
 
@@ -7,7 +7,7 @@ describe("KEYON remapping behaviour", () => {
     let machine;
 
     beforeEach(async () => {
-        machine = await bootWithXmos();
+        machine = await restoreOrBoot();
         // Program delays then checks if cursor-left is pressed
         await runCommand(machine, "10 FOR I=1 TO 1000:NEXT");
         await runCommand(machine, "20 PRINT INKEY(-98)");

@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { bootWithXmos, runCommand } from "./xmos-test-machine.js";
+import { restoreOrBoot, runCommand } from "./xmos-test-machine.js";
 
 describe("*HELP XMOS", () => {
     it("should list all XMOS commands with descriptions", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*HELP XMOS");
 
         expect(output).toContain("MOS Extension commands:");
@@ -31,7 +31,7 @@ describe("*HELP XMOS", () => {
 
 describe("*HELP", () => {
     it("should include MOS Extension with XMOS and FEATURES subcommands", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*HELP");
 
         expect(output).toContain("MOS Extension");
@@ -42,7 +42,7 @@ describe("*HELP", () => {
 
 describe("*HELP FEATURES", () => {
     it("should describe the extended input features", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*HELP FEATURES");
 
         expect(output).toContain("In addition to the commands shown under *HELP XMOS");
@@ -57,7 +57,7 @@ describe("*HELP FEATURES", () => {
 
 describe("*HELP with unknown argument", () => {
     it("should produce no output for an unrecognised topic", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*HELP NONSENSE");
         expect(output).toBe(">");
     });
@@ -65,7 +65,7 @@ describe("*HELP with unknown argument", () => {
 
 describe("abbreviated commands", () => {
     it("*H. XMOS should work as *HELP XMOS", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*H. XMOS");
 
         expect(output).toContain("MOS Extension commands:");
@@ -73,7 +73,7 @@ describe("abbreviated commands", () => {
     });
 
     it("*HELP X. should match XMOS and show the command listing", async () => {
-        const machine = await bootWithXmos();
+        const machine = await restoreOrBoot();
         const output = await runCommand(machine, "*HELP X.");
 
         expect(output).toContain("MOS Extension commands:");
