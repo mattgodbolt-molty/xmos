@@ -180,6 +180,24 @@ describe("*XON / *XOFF — extended input", () => {
     });
 });
 
+describe("ROMSEL shadow with XON off", () => {
+    it("XON-off KEYV path should not hang or crash", async () => {
+        const machine = await restoreOrBoot();
+        await runCommand(machine, "*XOFF");
+
+        // Exercise the XON-off KEYV path — each keystroke goes through
+        // xi_check_xon which must preserve A=0 and restore rom_number.
+        // If the fix is broken, the machine will hang or crash.
+        await runCommand(machine, "REM one");
+        await runCommand(machine, "REM two");
+        await runCommand(machine, "REM three");
+
+        // Verify the machine is still responsive
+        const output = await runCommand(machine, '*HELP XMOS');
+        expect(output).toContain("MOS Extension");
+    });
+});
+
 describe("*KEYON / *KEYOFF / *KSTATUS", () => {
     it("*KEYON should report keys are redefined", async () => {
         const machine = await restoreOrBoot();
