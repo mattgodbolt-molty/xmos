@@ -466,7 +466,7 @@
         RTS
 }
 .store_flag
-    EQUB &FF
+    EQUB &00                    \ 0 = no *STORE done; &FF = restore on reset
 .alias_file_handle
     EQUB &24
 \ parse_hex_digit — Parse a single hex digit (0-9, A-F) from A.
