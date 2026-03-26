@@ -532,8 +532,27 @@ The original ROM had alternating &00/&FF junk after the code (artefact
 of BBC Master uninitialised SWRAM). Removed — beebasm's SAVE pads the
 range automatically. Tests now load `build.rom` instead of `original.rom`.
 
+### rom_number shadow on XON-disabled KEYV path — FIXED
+When XON was off, `xi_check_xon` jumped to `default_keyv` without
+restoring `rom_number` (&F4) to match the language ROM. Harmless in
+practice — no IRQ handler should assume which ROM is paged — but
+rom_number should match sheila_romsel per the MOS contract. Fix:
+save A (=0, keyboard read op), restore &F4, restore A, then jump.
+
+Can't also restore sheila_romsel (&FE30) because this code runs from
+workspace RAM in the sideways bank — writing &FE30 would page out
+the executing code.
+
+### Hardcoded defkeys_direction_labels address — FIXED
+*KSTATUS and *DEFKEYS used hardcoded `&8ED0` for the direction label
+table. Replaced with `LO/HI(defkeys_direction_labels)`.
+
+### Dynamic workspace copy size
+`handle_reset` copy loop now uses
+`end_of_workspace_code - extended_input_code` instead of hardcoded
+`&D0`, so the copy size adjusts automatically.
+
 ### Remaining
-- Fix ROMSEL restore on XON-disabled path (RTS instead of JMP)
 - Remove COPY handler dead code
 - Remove CLEAR/ORG workspace overlay (no longer needed for byte-identical)
 - Deduplicate hex parse and OSBYTE 4 cursor setup subroutines

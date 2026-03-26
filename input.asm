@@ -71,17 +71,16 @@
     LDA #&00
     PLP
     RTS
-\ If XON mode is not active, pass through to the default KEYV handler.
-\ Otherwise, enter the extended line editor.
-\ BUG: this JMPs to default_keyv without returning through the cleanup
-\ code that restores ROMSEL. The paging was changed at xi_osword0_entry
-\ and should be restored. The handler still works because it runs from
-\ RAM, but ROMSEL is left pointing at the XMOS slot.
+\ If XON is off, restore rom_number and pass through to default KEYV.
+\ Harmless in practice (no IRQ handler should assume which ROM is paged)
+\ but rom_number should match sheila_romsel per the MOS contract.
+\ Can't also restore sheila_romsel because this runs from workspace RAM
+\ in the sideways bank. A=0 must be preserved (keyboard read op).
 .xi_check_xon
     LDA xon_flag
     BNE xi_init_state
-    LDX zp_src_lo
-    LDY zp_src_hi
+    LDX saved_language_rom : STX rom_number
+    LDX zp_src_lo : LDY zp_src_hi
     JMP default_keyv
 \ Reset editor state and begin reading a new input line.
 \ Fetches the caller's buffer address from the register block.
