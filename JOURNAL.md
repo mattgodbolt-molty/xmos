@@ -476,7 +476,43 @@ internally in jsbeeb's key tables).
 - **`loadSidewaysRam(slot, data)`**: convenience method to avoid the
   *SRLOAD dance.
 
-## Remaining work (as of 2026-03-25)
+## 2026-03-26: Test speedups and *L investigation
+
+### Test suite speedups (84s → 51s)
+- **loadSidewaysRam boot**: replaced *SRLOAD typing with direct
+  SWRAM load via jsbeeb 1.8.0's `loadSidewaysRam(7, romData)`.
+  Saves ~1s per test by skipping disc load and keyboard typing.
+- **runUntilInput**: replaced `runFor(8_000_000)` in runCommand
+  with `runUntilInput()` — stops as soon as the MOS returns to
+  the keyboard prompt instead of running 4 seconds of emulated
+  idle time after every command.
+
+### Keyboard timing investigation
+Attempted to speed up `type()` by reducing holdCycles below 40000.
+Measured IRQ interval: ~10000 cycles (200Hz, alternating 9000/11000).
+The MOS needs 4 IRQ periods (~40000 cycles) to fully process a
+keypress (debouncing/auto-repeat detection). 30000 cycles isn't
+enough — keys are missed. 40000 is a hard constraint.
+
+Typing speed: 2ms per character wall time. The bottleneck for
+typing-heavy tests (e.g. alias overflow with 200-char strings) is
+the number of characters, not the per-character overhead.
+
+### *L command behaviour
+Used MCP to observe what *L actually does. It programs function
+key 0 with: `LISTO 1` (format LIST output with spaces), `OLD`
+(restore BASIC program after reset), `MODE 128` (shadow screen),
+and VDU 19 colour swaps (white on black). Then triggers f0 via
+OSBYTE &8A. Test verifies OLD restores a program and LISTO adds
+spacing.
+
+### Alias table format
+Discovered the alias table has a gap byte between the null name
+terminator and the expansion text (alias.asm line 139: extra INY
+before copying expansion). Format is: name + null + gap + expansion
++ CR.
+
+## Remaining work (as of 2026-03-26)
 
 ### Drop byte-identical constraint
 - Fix *STORE &F4 shadow bug (write rom_number before sheila_romsel)
