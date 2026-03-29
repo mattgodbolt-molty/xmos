@@ -406,11 +406,9 @@ it fires when the line IS empty.
 1. **ROMSEL not restored on XON-disabled path**: when XON is off,
    `xi_check_xon` JMPs to the default KEYV handler without returning
    through the ROMSEL cleanup code. Rich noted this as a bug.
-2. ~~**Dead code in COPY handler**~~: originally thought the BEQ
-   at xi_copy_down_truncate was dead. On analysis (2026-03-29),
-   it IS reachable — handles cursor_pos == line_len (cursor at
-   end of line). The preceding CMP checks (window_width +
-   cursor_pos) vs line_len, which is a different comparison.
+2. **Dead code in COPY handler**: the BEQ after the second
+   length-cursor subtraction can never fire because equality was
+   already handled by the preceding CMP/BEQ.
 3. **Ctrl-N/Ctrl-O double-echo**: these fall through to
    xi_handle_printable which echoes them again.
 
